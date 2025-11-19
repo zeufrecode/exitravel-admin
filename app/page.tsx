@@ -278,7 +278,7 @@ export default function AdminDashboard() {
           Notification.requestPermission().then((permission) => {
             if (permission === 'granted') {
               // ⚠️ Remplace par TA clé VAPID (ex: "BJabc123...")
-              getToken(messaging, { vapidKey: 'TA_CLÉ_VAPID_ICI' })
+              getToken(messaging, { vapidKey: 'BJIoFp-vea39FaTAdNlSQWdNbk4cux4NdP5N67W9jupQ1SXnvs7Tvk1wFsFAbgYbUXLE0rx8KgccNUv0dsUneBo' })
                 .then((currentToken) => {
                   if (currentToken) {
                     console.log('✅ Token FCM:', currentToken);
