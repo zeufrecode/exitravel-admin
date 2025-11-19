@@ -232,18 +232,19 @@ useEffect(() => {
 
         // Notification si l'app est ouverte
         onMessage(messaging, (payload) => {
-          console.log('🔔 Message reçu en premier plan:', payload);
-          if (payload.notification) {
-            const notification = new Notification(payload.notification.title, {
-              body: payload.notification.body,
-              icon: '/icon-192.png'
-            });
-            notification.onclick = () => {
-              window.focus();
-              notification.close();
-            };
-          }
-        });
+  console.log('🔔 Message reçu en premier plan:', payload);
+  if (payload.notification?.title) {
+    const notification = new Notification(payload.notification.title, {
+      body: payload.notification.body || '',
+      icon: '/icon-192.png'
+    });
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+  }
+});
+        
       })
       .catch((err) => {
         console.error('❌ Erreur SW:', err);
