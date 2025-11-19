@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { db, auth } from '@/lib/firebase';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 import {
   collection,
   query,
@@ -11,7 +10,13 @@ import {
   updateDoc,
   doc,
 } from 'firebase/firestore';
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  User,
+} from 'firebase/auth';
+import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 import { format, startOfWeek, isSameWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -32,6 +37,7 @@ import {
   GlobeAltIcon,
 } from '@heroicons/react/24/outline';
 
+// Types
 type Reservation = {
   id: string;
   tripType: 'round' | 'oneWay' | 'multi';
@@ -75,6 +81,7 @@ const CABIN_LABELS: Record<string, string> = {
   first: 'Première',
 };
 
+// Export CSV
 const exportToCSV = (reservations: Reservation[]) => {
   const headers = [
     'ID',
@@ -189,68 +196,22 @@ export default function AdminDashboard() {
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'status' | 'tripType' | 'destination' | 'client'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  // 🔹 États de filtre déclarés AVANT useMemo
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevReservationsLength = useRef(0);
 
+  // 🔐 Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoadingAuth(false);
     });
     return () => unsubscribe();
-    
   }, []);
-useEffect(() => {
-  if (!user || typeof window === 'undefined') return;
 
-  // Vérifie si les notifications sont prises en charge
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker
-      .register('/firebase-messaging-sw.js')
-      .then((registration) => {
-        const messaging = getMessaging();
-        Notification.requestPermission().then((permission) => {
-          if (permission === 'granted') {
-            // ⚠️ Remplace par TA vraie clé VAPID (ex: "BJabc123...")
-            getToken(messaging, { vapidKey: 'BJIoFp-vea39FaTAdNlSQWdNbk4cux4NdP5N67W9jupQ1SXnvs7Tvk1wFsFAbgYbUXLE0rx8KgccNUv0dsUneBo' })
-              .then((currentToken) => {
-                if (currentToken) {
-                  console.log('✅ Token FCM:', currentToken);
-                } else {
-                  console.log('❌ Pas de token FCM disponible.');
-                }
-              })
-              .catch((err) => {
-                console.error('❌ Erreur token FCM:', err);
-              });
-          }
-        });
-
-        // Notification si l'app est ouverte
-        onMessage(messaging, (payload) => {
-  console.log('🔔 Message reçu en premier plan:', payload);
-  if (payload.notification?.title) {
-    const notification = new Notification(payload.notification.title, {
-      body: payload.notification.body || '',
-      icon: '/icon-192.png'
-    });
-    notification.onclick = () => {
-      window.focus();
-      notification.close();
-    };
-  }
-});
-        
-      })
-      .catch((err) => {
-        console.error('❌ Erreur SW:', err);
-      });
-  }
-}, [user]);
+  // 🔑 Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -265,10 +226,12 @@ useEffect(() => {
     }
   };
 
+  // 🔐 Logout
   const handleLogout = async () => {
     await signOut(auth);
   };
 
+  // 📡 Firestore + Notifications
   useEffect(() => {
     if (!user) return;
 
@@ -282,8 +245,17 @@ useEffect(() => {
         })) as Reservation[];
 
         if (data.length > prevReservationsLength.current && prevReservationsLength.current > 0) {
+          // 🔔 Notification sonore
           if (audioRef.current) {
             audioRef.current.play().catch((e) => console.warn('Audio play blocked:', e));
+          }
+
+          // 🔔 Notification push (si autorisée)
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🆕 Nouvelle réservation !', {
+              body: 'Une nouvelle demande a été reçue.',
+              icon: '/icon-192.png',
+            });
           }
         }
         prevReservationsLength.current = data.length;
@@ -297,9 +269,52 @@ useEffect(() => {
       }
     );
 
+    // 📲 Initialisation FCM (uniquement côté client)
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/firebase-messaging-sw.js')
+        .then((registration) => {
+          const messaging = getMessaging();
+          Notification.requestPermission().then((permission) => {
+            if (permission === 'granted') {
+              // ⚠️ Remplace par TA clé VAPID (ex: "BJabc123...")
+              getToken(messaging, { vapidKey: 'TA_CLÉ_VAPID_ICI' })
+                .then((currentToken) => {
+                  if (currentToken) {
+                    console.log('✅ Token FCM:', currentToken);
+                  }
+                })
+                .catch((err) => {
+                  console.error('❌ Erreur token FCM:', err);
+                });
+            }
+          });
+
+          onMessage(messaging, (payload) => {
+            console.log('🔔 Message reçu en premier plan:', payload);
+            const title = payload.notification?.title || 'Nouvelle réservation';
+            const body = payload.notification?.body || 'Une demande a été reçue.';
+            if (title) {
+              const notification = new Notification(title, {
+                body,
+                icon: '/icon-192.png',
+              });
+              notification.onclick = () => {
+                window.focus();
+                notification.close();
+              };
+            }
+          });
+        })
+        .catch((err) => {
+          console.error('❌ Erreur SW:', err);
+        });
+    }
+
     return () => unsubscribe();
   }, [user]);
 
+  // ✏️ Mise à jour statut
   const updateStatus = async (id: string, status: 'confirmed' | 'rejected') => {
     try {
       await updateDoc(doc(db, 'reservations', id), { status });
@@ -311,7 +326,7 @@ useEffect(() => {
     }
   };
 
-  // 🔹 useMemo utilise désormais des variables déclarées AVANT
+  // 🔍 Tri + Filtres
   const sortedAndFilteredReservations = useMemo(() => {
     let filtered = [...reservations];
 
@@ -330,11 +345,9 @@ useEffect(() => {
       filtered = filtered.filter((res) => {
         const createdAt = res.createdAt?.toDate?.();
         if (!createdAt) return false;
-
         const createdAtDate = new Date(createdAt.getFullYear(), createdAt.getMonth(), createdAt.getDate());
         const fromDate = dateFrom ? new Date(dateFrom) : null;
         const toDate = dateTo ? new Date(dateTo) : null;
-
         if (fromDate && createdAtDate < fromDate) return false;
         if (toDate && createdAtDate > toDate) return false;
         return true;
@@ -373,6 +386,7 @@ useEffect(() => {
     });
   }, [reservations, sortBy, sortOrder, searchQuery, dateFrom, dateTo]);
 
+  // 📊 Stats
   const stats = useMemo(() => {
     const now = new Date();
     const oneWeekAgo = startOfWeek(now, { weekStartsOn: 1 });
@@ -389,6 +403,7 @@ useEffect(() => {
     return { total, thisWeek, pending, confirmed, rejected };
   }, [reservations]);
 
+  // ⏳ Chargement auth
   if (loadingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -397,6 +412,7 @@ useEffect(() => {
     );
   }
 
+  // 🔒 Login screen
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
@@ -438,6 +454,7 @@ useEffect(() => {
     );
   }
 
+  // 🖥️ Dashboard principal
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <audio ref={audioRef} src="/notification.mp3" />
@@ -603,6 +620,7 @@ useEffect(() => {
           </div>
         </div>
 
+        {/* Modale détails (inchangée) */}
         {selectedReservation && (
           <div
             className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 bg-black/40 backdrop-blur-sm"
