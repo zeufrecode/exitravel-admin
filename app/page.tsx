@@ -19,7 +19,6 @@ import {
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 import { format, startOfWeek, isSameWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
-
 import {
   ArrowDownTrayIcon,
   ArrowLeftOnRectangleIcon,
@@ -56,24 +55,22 @@ type Reservation = {
   createdAt: any;
 };
 
+// Labels et couleurs
 const STATUS_LABELS: Record<string, string> = {
   pending: 'En attente',
   confirmed: 'Confirmé',
   rejected: 'Rejeté',
 };
-
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
 };
-
 const TRIP_TYPE_LABELS: Record<string, string> = {
   round: 'Aller-retour',
   oneWay: 'Aller simple',
   multi: 'Multiville',
 };
-
 const CABIN_LABELS: Record<string, string> = {
   eco: 'Éco',
   ecoPremium: 'Éco Premium',
@@ -132,12 +129,17 @@ const exportToCSV = (reservations: Reservation[]) => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `reservations_exitravels_${new Date().toISOString().split('T')[0]}.csv`);
+  link.setAttribute(
+    'download',
+    `reservations_exitravels_${new Date().toISOString().split('T')[0]}.csv`
+  );
   link.style.visibility = 'hidden';
   document.body.appendChild(link);
+  link.click();
   document.body.removeChild(link);
 };
 
+// Composant StatCard
 const StatCard = ({ title, value, icon: Icon, color = 'bg-blue-100 text-blue-800' }: any) => (
   <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
     <div className="flex items-center gap-3">
@@ -152,6 +154,7 @@ const StatCard = ({ title, value, icon: Icon, color = 'bg-blue-100 text-blue-800
   </div>
 );
 
+// Composant TopDestinations
 const TopDestinations = ({ reservations }: { reservations: Reservation[] }) => {
   const destinations = useMemo(() => {
     const count: Record<string, number> = {};
@@ -185,6 +188,7 @@ const TopDestinations = ({ reservations }: { reservations: Reservation[] }) => {
   );
 };
 
+// Composant principal
 export default function AdminDashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -218,11 +222,7 @@ export default function AdminDashboard() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err: any) {
-      if (err.code === 'auth/invalid-credential') {
-        setLoginError('Email ou mot de passe incorrect.');
-      } else {
-        setLoginError('Erreur de connexion. Réessayez.');
-      }
+      setLoginError('Email ou mot de passe incorrect.');
     }
   };
 
@@ -234,23 +234,14 @@ export default function AdminDashboard() {
   // 📡 Firestore + Notifications
   useEffect(() => {
     if (!user) return;
-
     const q = query(collection(db, 'reservations'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Reservation[];
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Reservation[];
 
         if (data.length > prevReservationsLength.current && prevReservationsLength.current > 0) {
-          // 🔔 Notification sonore
-          if (audioRef.current) {
-            audioRef.current.play().catch((e) => console.warn('Audio play blocked:', e));
-          }
-
-          // 🔔 Notification push (si autorisée)
+          if (audioRef.current) audioRef.current.play().catch(() => {});
           if ('Notification' in window && Notification.permission === 'granted') {
             new Notification('🆕 Nouvelle réservation !', {
               body: 'Une nouvelle demande a été reçue.',
@@ -259,56 +250,33 @@ export default function AdminDashboard() {
           }
         }
         prevReservationsLength.current = data.length;
-
         setReservations(data);
         setLoadingData(false);
       },
       (err) => {
-        console.error('❌ Erreur Firestore:', err);
+        console.error(err);
         setLoadingData(false);
       }
     );
 
-    // 📲 Initialisation FCM (uniquement côté client)
+    // FCM
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/firebase-messaging-sw.js')
-        .then((registration) => {
-          const messaging = getMessaging();
-          Notification.requestPermission().then((permission) => {
-            if (permission === 'granted') {
-              // ⚠️ Remplace par TA clé VAPID (ex: "BJabc123...")
-              getToken(messaging, { vapidKey: 'BJIoFp-vea39FaTAdNlSQWdNbk4cux4NdP5N67W9jupQ1SXnvs7Tvk1wFsFAbgYbUXLE0rx8KgccNUv0dsUneBo' })
-                .then((currentToken) => {
-                  if (currentToken) {
-                    console.log('✅ Token FCM:', currentToken);
-                  }
-                })
-                .catch((err) => {
-                  console.error('❌ Erreur token FCM:', err);
-                });
-            }
-          });
-
-          onMessage(messaging, (payload) => {
-            console.log('🔔 Message reçu en premier plan:', payload);
-            const title = payload.notification?.title || 'Nouvelle réservation';
-            const body = payload.notification?.body || 'Une demande a été reçue.';
-            if (title) {
-              const notification = new Notification(title, {
-                body,
-                icon: '/icon-192.png',
-              });
-              notification.onclick = () => {
-                window.focus();
-                notification.close();
-              };
-            }
-          });
-        })
-        .catch((err) => {
-          console.error('❌ Erreur SW:', err);
+      navigator.serviceWorker.register('/firebase-messaging-sw.js').then((registration) => {
+        const messaging = getMessaging();
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            getToken(messaging, { vapidKey: 'BJIoFp-vea39FaTAdNlSQWdNbk4cux4NdP5N67W9jupQ1SXnvs7Tvk1wFsFAbgYbUXLE0rx8KgccNUv0dsUneBo' })
+              .then((token) => console.log('FCM Token:', token))
+              .catch(console.error);
+          }
         });
+        onMessage(messaging, (payload) => {
+          new Notification(payload.notification?.title || 'Nouvelle réservation', {
+            body: payload.notification?.body || 'Une demande a été reçue.',
+            icon: '/icon-192.png',
+          });
+        });
+      }).catch(console.error);
     }
 
     return () => unsubscribe();
@@ -318,11 +286,9 @@ export default function AdminDashboard() {
   const updateStatus = async (id: string, status: 'confirmed' | 'rejected') => {
     try {
       await updateDoc(doc(db, 'reservations', id), { status });
-      if (selectedReservation?.id === id) {
-        setSelectedReservation({ ...selectedReservation, status });
-      }
+      if (selectedReservation?.id === id) setSelectedReservation({ ...selectedReservation, status });
     } catch (err) {
-      console.error('❌ Erreur mise à jour:', err);
+      console.error(err);
     }
   };
 
@@ -389,17 +355,13 @@ export default function AdminDashboard() {
   // 📊 Stats
   const stats = useMemo(() => {
     const now = new Date();
-    const oneWeekAgo = startOfWeek(now, { weekStartsOn: 1 });
-
     const total = reservations.length;
     const thisWeek = reservations.filter(
-      (res) =>
-        res.createdAt?.toDate && isSameWeek(res.createdAt.toDate(), now, { weekStartsOn: 1 })
+      (res) => res.createdAt?.toDate && isSameWeek(res.createdAt.toDate(), now, { weekStartsOn: 1 })
     ).length;
     const pending = reservations.filter((r) => r.status === 'pending').length;
     const confirmed = reservations.filter((r) => r.status === 'confirmed').length;
     const rejected = reservations.filter((r) => r.status === 'rejected').length;
-
     return { total, thisWeek, pending, confirmed, rejected };
   }, [reservations]);
 
@@ -431,7 +393,7 @@ export default function AdminDashboard() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ff781d] focus:border-transparent outline-none transition"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ff781d] outline-none transition"
               required
             />
             <input
@@ -439,7 +401,7 @@ export default function AdminDashboard() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Mot de passe"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ff781d] focus:border-transparent outline-none transition"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ff781d] outline-none transition"
               required
             />
             <button
