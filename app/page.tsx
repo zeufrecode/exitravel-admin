@@ -36,7 +36,6 @@ import {
   GlobeAltIcon,
 } from '@heroicons/react/24/outline';
 
-// Types
 type Reservation = {
   id: string;
   tripType: 'round' | 'oneWay' | 'multi';
@@ -55,7 +54,6 @@ type Reservation = {
   createdAt: any;
 };
 
-// Labels et couleurs
 const STATUS_LABELS: Record<string, string> = {
   pending: 'En attente',
   confirmed: 'Confirmé',
@@ -78,7 +76,6 @@ const CABIN_LABELS: Record<string, string> = {
   first: 'Première',
 };
 
-// Export CSV
 const exportToCSV = (reservations: Reservation[]) => {
   const headers = [
     'ID',
@@ -139,12 +136,11 @@ const exportToCSV = (reservations: Reservation[]) => {
   document.body.removeChild(link);
 };
 
-// Composant StatCard
 const StatCard = ({ title, value, icon: Icon, color = 'bg-blue-100 text-blue-800' }: any) => (
   <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
     <div className="flex items-center gap-3">
       <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center`}>
-        <Icon className="h-5 w-5" />
+        <Icon className="h-5 w-5 text-current" />
       </div>
       <div>
         <p className="text-sm text-gray-600">{title}</p>
@@ -154,7 +150,6 @@ const StatCard = ({ title, value, icon: Icon, color = 'bg-blue-100 text-blue-800
   </div>
 );
 
-// Composant TopDestinations
 const TopDestinations = ({ reservations }: { reservations: Reservation[] }) => {
   const destinations = useMemo(() => {
     const count: Record<string, number> = {};
@@ -174,13 +169,14 @@ const TopDestinations = ({ reservations }: { reservations: Reservation[] }) => {
   return (
     <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
       <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-        <GlobeAltIcon className="h-5 w-5" /> Top destinations
+        <GlobeAltIcon className="h-5 w-5 text-gray-900" />
+        Top destinations
       </h3>
       <ul className="space-y-2">
         {destinations.map(([dest, count]) => (
           <li key={dest} className="flex justify-between text-sm">
             <span className="text-gray-700">{dest}</span>
-            <span className="font-medium">{count}</span>
+            <span className="font-medium text-gray-900">{count}</span>
           </li>
         ))}
       </ul>
@@ -188,7 +184,6 @@ const TopDestinations = ({ reservations }: { reservations: Reservation[] }) => {
   );
 };
 
-// Composant principal
 export default function AdminDashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
@@ -206,7 +201,6 @@ export default function AdminDashboard() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevReservationsLength = useRef(0);
 
-  // 🔐 Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
@@ -215,7 +209,6 @@ export default function AdminDashboard() {
     return () => unsubscribe();
   }, []);
 
-  // 🔑 Login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -226,12 +219,10 @@ export default function AdminDashboard() {
     }
   };
 
-  // 🔐 Logout
   const handleLogout = async () => {
     await signOut(auth);
   };
 
-  // 📡 Firestore + Notifications
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, 'reservations'), orderBy('createdAt', 'desc'));
@@ -259,7 +250,6 @@ export default function AdminDashboard() {
       }
     );
 
-    // FCM
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('/firebase-messaging-sw.js').then((registration) => {
         const messaging = getMessaging();
@@ -282,7 +272,6 @@ export default function AdminDashboard() {
     return () => unsubscribe();
   }, [user]);
 
-  // ✏️ Mise à jour statut
   const updateStatus = async (id: string, status: 'confirmed' | 'rejected') => {
     try {
       await updateDoc(doc(db, 'reservations', id), { status });
@@ -292,7 +281,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // 🔍 Tri + Filtres
   const sortedAndFilteredReservations = useMemo(() => {
     let filtered = [...reservations];
 
@@ -352,7 +340,6 @@ export default function AdminDashboard() {
     });
   }, [reservations, sortBy, sortOrder, searchQuery, dateFrom, dateTo]);
 
-  // 📊 Stats
   const stats = useMemo(() => {
     const now = new Date();
     const total = reservations.length;
@@ -365,7 +352,6 @@ export default function AdminDashboard() {
     return { total, thisWeek, pending, confirmed, rejected };
   }, [reservations]);
 
-  // ⏳ Chargement auth
   if (loadingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -374,7 +360,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // 🔒 Login screen
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
@@ -416,9 +401,8 @@ export default function AdminDashboard() {
     );
   }
 
-  // 🖥️ Dashboard principal
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <audio ref={audioRef} src="/notification.mp3" />
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -457,48 +441,50 @@ export default function AdminDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
           <div className="lg:col-span-3">
-            <div className="mb-4 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
-              <input
-                type="text"
-                placeholder="Rechercher (client, destination...)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d]"
-              />
-              <div className="flex gap-2 w-full md:w-auto">
+            <div className="mb-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+              <div className="flex flex-col md:flex-row gap-4 flex-wrap items-start md:items-center">
                 <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d]"
+                  type="text"
+                  placeholder="Rechercher (client, destination...)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] focus:border-[#ff781d] outline-none"
                 />
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d]"
-                />
-              </div>
-              <div className="flex flex-wrap gap-3 w-full md:w-auto">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d]"
-                >
-                  <option value="date">Date</option>
-                  <option value="status">Statut</option>
-                  <option value="tripType">Type</option>
-                  <option value="destination">Destination</option>
-                  <option value="client">Client</option>
-                </select>
-                <select
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value as any)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d]"
-                >
-                  <option value="desc">↓ Récent</option>
-                  <option value="asc">↑ Ancien</option>
-                </select>
+                <div className="flex gap-2 w-full md:w-auto">
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] focus:border-[#ff781d] outline-none"
+                  />
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] focus:border-[#ff781d] outline-none"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] focus:border-[#ff781d] outline-none"
+                  >
+                    <option value="date">Date</option>
+                    <option value="status">Statut</option>
+                    <option value="tripType">Type</option>
+                    <option value="destination">Destination</option>
+                    <option value="client">Client</option>
+                  </select>
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value as any)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] focus:border-[#ff781d] outline-none"
+                  >
+                    <option value="desc">↓ Récent</option>
+                    <option value="asc">↑ Ancien</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -509,39 +495,23 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div className="overflow-x-auto rounded-2xl shadow border border-gray-200">
-                <div className="px-5 py-3 text-sm text-gray-600 bg-gray-50 border-b border-gray-200">
+                <div className="px-4 py-3 text-sm text-gray-600 bg-gray-50 border-b border-gray-200">
                   {sortedAndFilteredReservations.length} réservation{sortedAndFilteredReservations.length > 1 ? 's' : ''} affichée{sortedAndFilteredReservations.length > 1 ? 's' : ''}
                 </div>
                 <table className="min-w-full bg-white">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <UserIcon className="h-4 w-4" /> Client
-                        </div>
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        <div className="flex items-center gap-1.5">
-                          <MapPinIcon className="h-4 w-4" /> Destination
-                        </div>
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        <div className="flex items-center gap-1.5">
-                          <CalendarIcon className="h-4 w-4" /> Date
-                        </div>
-                      </th>
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        <div className="flex items-center gap-1.5">
-                          <InformationCircleIcon className="h-4 w-4" /> Statut
-                        </div>
-                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Client</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Destination</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Statut</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {sortedAndFilteredReservations.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-5 py-12 text-center text-gray-500">
+                        <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
                           Aucune réservation trouvée.
                         </td>
                       </tr>
@@ -552,18 +522,18 @@ export default function AdminDashboard() {
                           onClick={() => setSelectedReservation(res)}
                           className="hover:bg-orange-50 cursor-pointer transition-colors"
                         >
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-4">
                             <div className="font-medium text-gray-900">{res.contact.prenom} {res.contact.nom}</div>
                             <div className="text-sm text-gray-500">{res.contact.email}</div>
                           </td>
-                          <td className="px-5 py-4 text-sm text-gray-800">{TRIP_TYPE_LABELS[res.tripType]}</td>
-                          <td className="px-5 py-4 text-sm text-gray-800">{res.flights[0]?.to || '—'}</td>
-                          <td className="px-5 py-4 text-sm text-gray-500">
+                          <td className="px-4 py-4 text-sm text-gray-800">{TRIP_TYPE_LABELS[res.tripType]}</td>
+                          <td className="px-4 py-4 text-sm text-gray-800">{res.flights[0]?.to || '—'}</td>
+                          <td className="px-4 py-4 text-sm text-gray-600">
                             {res.createdAt?.toDate
                               ? format(res.createdAt.toDate(), 'dd MMM yyyy', { locale: fr })
                               : '—'}
                           </td>
-                          <td className="px-5 py-4">
+                          <td className="px-4 py-4">
                             <span className={`px-2.5 py-1 inline-flex text-xs font-medium rounded-full ${STATUS_COLORS[res.status]}`}>
                               {STATUS_LABELS[res.status]}
                             </span>
@@ -576,13 +546,12 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
-
           <div>
             <TopDestinations reservations={reservations} />
           </div>
         </div>
 
-        {/* Modale détails (inchangée) */}
+        {/* MODALE COMPLÈTE AVEC TEXTES SÉCURISÉS */}
         {selectedReservation && (
           <div
             className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 bg-black/40 backdrop-blur-sm"
@@ -641,41 +610,41 @@ export default function AdminDashboard() {
 
                 <div className="mb-6 p-4 bg-gray-50 rounded-xl">
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <UserIcon className="h-5 w-5" /> Informations client
+                    <UserIcon className="h-5 w-5 text-gray-900" /> Informations client
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                    <p><span className="font-medium">Nom :</span> {selectedReservation.contact.nom}</p>
-                    <p><span className="font-medium">Prénom :</span> {selectedReservation.contact.prenom}</p>
-                    <p><span className="font-medium">Email :</span> {selectedReservation.contact.email}</p>
-                    <p><span className="font-medium">Téléphone :</span> {selectedReservation.contact.telephone}</p>
+                    <p><span className="font-medium text-gray-900">Nom :</span> <span className="text-gray-900">{selectedReservation.contact.nom}</span></p>
+                    <p><span className="font-medium text-gray-900">Prénom :</span> <span className="text-gray-900">{selectedReservation.contact.prenom}</span></p>
+                    <p><span className="font-medium text-gray-900">Email :</span> <span className="text-gray-900">{selectedReservation.contact.email}</span></p>
+                    <p><span className="font-medium text-gray-900">Téléphone :</span> <span className="text-gray-900">{selectedReservation.contact.telephone}</span></p>
                   </div>
                 </div>
 
                 <div className="mb-6">
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <MapPinIcon className="h-5 w-5" /> Détails du voyage
+                    <MapPinIcon className="h-5 w-5 text-gray-900" /> Détails du voyage
                   </h3>
-                  <p className="mb-3"><span className="font-medium">Type :</span> {TRIP_TYPE_LABELS[selectedReservation.tripType]}</p>
+                  <p className="mb-3 text-gray-900"><span className="font-medium">Type :</span> {TRIP_TYPE_LABELS[selectedReservation.tripType]}</p>
 
                   {selectedReservation.tripType === 'multi' ? (
                     <div className="mb-3">
-                      <span className="font-medium">Classes :</span>
+                      <span className="font-medium text-gray-900">Classes :</span>
                       <ul className="mt-1 space-y-1">
                         {selectedReservation.flights.map((flight, idx) => (
-                          <li key={idx} className="text-sm">
+                          <li key={idx} className="text-sm text-gray-900">
                             • {flight.from} → {flight.to}: <span className="font-medium">{CABIN_LABELS[flight.cabinClass]}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
                   ) : (
-                    <p className="mb-3">
+                    <p className="mb-3 text-gray-900">
                       <span className="font-medium">Classe :</span>{' '}
                       {CABIN_LABELS[selectedReservation.flights[0]?.cabinClass] || '—'}
                     </p>
                   )}
 
-                  <p className="mb-4"><span className="font-medium">Voyageurs :</span>
+                  <p className="mb-4 text-gray-900"><span className="font-medium">Voyageurs :</span>
                     {selectedReservation.travelers.adultes > 0 && ` ${selectedReservation.travelers.adultes} adulte(s)`}
                     {selectedReservation.travelers.enfants > 0 && `, ${selectedReservation.travelers.enfants} enfant(s)`}
                     {selectedReservation.travelers.bebes > 0 && `, ${selectedReservation.travelers.bebes} bébé(s)`}
@@ -684,11 +653,11 @@ export default function AdminDashboard() {
                   <div className="space-y-4">
                     {selectedReservation.flights.map((flight, idx) => (
                       <div key={idx} className="p-4 border-l-4 border-[#ff781d] bg-white rounded-r-lg shadow-sm">
-                        <p><span className="font-medium">Départ :</span> {flight.from} ({flight.fromIata})</p>
-                        <p><span className="font-medium">Destination :</span> {flight.to} ({flight.toIata})</p>
-                        <p><span className="font-medium">Départ le :</span> {flight.departureDate?.toDate ? format(flight.departureDate.toDate(), 'dd MMM yyyy', { locale: fr }) : '—'}</p>
+                        <p className="text-gray-900"><span className="font-medium">Départ :</span> {flight.from} ({flight.fromIata})</p>
+                        <p className="text-gray-900"><span className="font-medium">Destination :</span> {flight.to} ({flight.toIata})</p>
+                        <p className="text-gray-900"><span className="font-medium">Départ le :</span> {flight.departureDate?.toDate ? format(flight.departureDate.toDate(), 'dd MMM yyyy', { locale: fr }) : '—'}</p>
                         {flight.returnDate && (
-                          <p><span className="font-medium">Retour le :</span> {format(flight.returnDate.toDate(), 'dd MMM yyyy', { locale: fr })}</p>
+                          <p className="text-gray-900"><span className="font-medium">Retour le :</span> {format(flight.returnDate.toDate(), 'dd MMM yyyy', { locale: fr })}</p>
                         )}
                       </div>
                     ))}
