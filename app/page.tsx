@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { db, auth } from '@/lib/firebase';
+import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 import {
   collection,
   query,
@@ -201,8 +202,54 @@ export default function AdminDashboard() {
       setLoadingAuth(false);
     });
     return () => unsubscribe();
+    
   }, []);
+useEffect(() => {
+  if (!user || typeof window === 'undefined') return;
 
+  // Vérifie si les notifications sont prises en charge
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker
+      .register('/firebase-messaging-sw.js')
+      .then((registration) => {
+        const messaging = getMessaging();
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            // ⚠️ Remplace par TA vraie clé VAPID (ex: "BJabc123...")
+            getToken(messaging, { vapidKey: 'BJIoFp-vea39FaTAdNlSQWdNbk4cux4NdP5N67W9jupQ1SXnvs7Tvk1wFsFAbgYbUXLE0rx8KgccNUv0dsUneBo' })
+              .then((currentToken) => {
+                if (currentToken) {
+                  console.log('✅ Token FCM:', currentToken);
+                } else {
+                  console.log('❌ Pas de token FCM disponible.');
+                }
+              })
+              .catch((err) => {
+                console.error('❌ Erreur token FCM:', err);
+              });
+          }
+        });
+
+        // Notification si l'app est ouverte
+        onMessage(messaging, (payload) => {
+          console.log('🔔 Message reçu en premier plan:', payload);
+          if (payload.notification) {
+            const notification = new Notification(payload.notification.title, {
+              body: payload.notification.body,
+              icon: '/icon-192.png'
+            });
+            notification.onclick = () => {
+              window.focus();
+              notification.close();
+            };
+          }
+        });
+      })
+      .catch((err) => {
+        console.error('❌ Erreur SW:', err);
+      });
+  }
+}, [user]);
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
