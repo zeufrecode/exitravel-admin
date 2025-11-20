@@ -1,6 +1,5 @@
 'use client';
-
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { db, auth } from '@/lib/firebase';
 import {
   collection,
@@ -9,6 +8,7 @@ import {
   onSnapshot,
   updateDoc,
   doc,
+  deleteDoc,
 } from 'firebase/firestore';
 import {
   signInWithEmailAndPassword,
@@ -17,7 +17,7 @@ import {
   User,
 } from 'firebase/auth';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
-import { format, startOfWeek, isSameWeek } from 'date-fns';
+import { format, isSameWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   ArrowDownTrayIcon,
@@ -36,12 +36,13 @@ import {
   ChatBubbleLeftRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ArchiveBoxIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 
 // ========================
 // TYPES
 // ========================
-
 type Reservation = {
   id: string;
   tripType: 'round' | 'oneWay' | 'multi';
@@ -58,8 +59,8 @@ type Reservation = {
   contact: { nom: string; prenom: string; email: string; telephone: string };
   status: 'pending' | 'confirmed' | 'rejected';
   createdAt: any;
+  isDeleted?: boolean;
 };
-
 type Message = {
   id: string;
   nom: string;
@@ -68,12 +69,12 @@ type Message = {
   telephone: string;
   message: string;
   createdAt: any;
+  isDeleted?: boolean;
 };
 
 // ========================
 // CONSTANTES
 // ========================
-
 const STATUS_LABELS: Record<string, string> = {
   pending: 'En attente',
   confirmed: 'Confirmé',
@@ -99,10 +100,8 @@ const CABIN_LABELS: Record<string, string> = {
 // ========================
 // UTILS
 // ========================
-
 const exportToCSV = (reservations: Reservation[]) => {
   if (reservations.length === 0) return;
-
   const headers = [
     'ID',
     'Date',
@@ -115,7 +114,6 @@ const exportToCSV = (reservations: Reservation[]) => {
     'Voyageurs (Adultes/Enfants/Bébés)',
     'Détail des vols (Départ → Destination | Classe | Date)',
   ];
-
   const rows = reservations.map((res) => {
     const createdAt = res.createdAt?.toDate?.();
     const date = createdAt ? format(createdAt, 'dd/MM/yyyy', { locale: fr }) : '';
@@ -128,7 +126,6 @@ const exportToCSV = (reservations: Reservation[]) => {
         return `${f.from} → ${f.to} | ${cls} | ${depDateStr}`;
       })
       .join(' ; ');
-
     return [
       res.id,
       date,
@@ -144,7 +141,6 @@ const exportToCSV = (reservations: Reservation[]) => {
       .map((field) => `"${String(field ?? '').replace(/"/g, '""')}"`)
       .join(';');
   });
-
   const csvContent = ['\uFEFF' + headers.join(';'), ...rows].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -187,9 +183,7 @@ const TopDestinations = ({ reservations }: { reservations: Reservation[] }) => {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
   }, [reservations]);
-
   if (destinations.length === 0) return null;
-
   return (
     <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
       <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -211,7 +205,6 @@ const TopDestinations = ({ reservations }: { reservations: Reservation[] }) => {
 // ========================
 // COMPOSANT PRINCIPAL
 // ========================
-
 export default function AdminDashboard() {
   // Auth
   const [user, setUser] = useState<User | null>(null);
@@ -220,30 +213,42 @@ export default function AdminDashboard() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Réservations
+  // Données
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [deletedReservations, setDeletedReservations] = useState<Reservation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [deletedMessages, setDeletedMessages] = useState<Message[]>([]);
   const [loadingReservations, setLoadingReservations] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(true);
+
+  // Sélection
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+
+  // UI
+  const [activeTab, setActiveTab] = useState<'reservations' | 'messages' | 'trash'>('reservations');
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'status' | 'tripType' | 'destination' | 'client'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // Messages
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(true);
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-
-  // UI
-  const [activeTab, setActiveTab] = useState<'reservations' | 'messages'>('reservations');
-  const [isCollapsed, setIsCollapsed] = useState(false); // ✅ Sidebar pliable sur desktop
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // ✅ Mobile menu
-
+  // Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevReservationsLength = useRef(0);
   const prevMessagesLength = useRef(0);
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Auto-hide toast
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 2800);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // Fermer sidebar mobile au clic extérieur
   useEffect(() => {
@@ -258,7 +263,7 @@ export default function AdminDashboard() {
     }
   }, [isSidebarOpen]);
 
-  // Auth & Firestore listeners
+  // Auth & Firestore
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
@@ -273,38 +278,34 @@ export default function AdminDashboard() {
     const reservationsUnsub = onSnapshot(
       query(collection(db, 'reservations'), orderBy('createdAt', 'desc')),
       (snapshot) => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Reservation[];
-        if (data.length > prevReservationsLength.current && prevReservationsLength.current > 0) {
+        const allRes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Reservation[];
+        setReservations(allRes.filter(r => !r.isDeleted));
+        setDeletedReservations(allRes.filter(r => r.isDeleted));
+        setLoadingReservations(false);
+        if (allRes.filter(r => !r.isDeleted).length > prevReservationsLength.current && prevReservationsLength.current > 0) {
           if (audioRef.current) audioRef.current.play().catch(() => {});
           if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-            new Notification('🆕 Nouvelle réservation !', {
-              body: 'Une demande a été reçue.',
-              icon: '/icon-192.png',
-            });
+            new Notification('🆕 Nouvelle réservation !', { body: 'Une demande a été reçue.', icon: '/icon-192.png' });
           }
         }
-        prevReservationsLength.current = data.length;
-        setReservations(data);
-        setLoadingReservations(false);
+        prevReservationsLength.current = allRes.filter(r => !r.isDeleted).length;
       }
     );
 
     const messagesUnsub = onSnapshot(
       query(collection(db, 'messages'), orderBy('createdAt', 'desc')),
       (snapshot) => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Message[];
-        if (data.length > prevMessagesLength.current && prevMessagesLength.current > 0) {
+        const allMsg = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Message[];
+        setMessages(allMsg.filter(m => !m.isDeleted));
+        setDeletedMessages(allMsg.filter(m => m.isDeleted));
+        setLoadingMessages(false);
+        if (allMsg.filter(m => !m.isDeleted).length > prevMessagesLength.current && prevMessagesLength.current > 0) {
           if (audioRef.current) audioRef.current.play().catch(() => {});
           if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-            new Notification('📩 Nouveau message de contact !', {
-              body: 'Un client vient de vous contacter.',
-              icon: '/icon-192.png',
-            });
+            new Notification('📩 Nouveau message de contact !', { body: 'Un client vient de vous contacter.', icon: '/icon-192.png' });
           }
         }
-        prevMessagesLength.current = data.length;
-        setMessages(data);
-        setLoadingMessages(false);
+        prevMessagesLength.current = allMsg.filter(m => !m.isDeleted).length;
       }
     );
 
@@ -331,7 +332,9 @@ export default function AdminDashboard() {
     };
   }, [user]);
 
-  // Handlers
+  // ========================
+  // HANDLERS
+  // ========================
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -355,10 +358,33 @@ export default function AdminDashboard() {
     }
   };
 
-  // Logique filtres / stats
+  const softDeleteReservation = async (id: string) => {
+    try {
+      await updateDoc(doc(db, 'reservations', id), { isDeleted: true });
+      setToast({ message: 'Réservation déplacée vers la corbeille.', type: 'success' });
+      setSelectedReservation(null);
+    } catch (err) {
+      setToast({ message: 'Erreur lors de la mise à la corbeille.', type: 'error' });
+      console.error(err);
+    }
+  };
+
+  const softDeleteMessage = async (id: string) => {
+    try {
+      await updateDoc(doc(db, 'messages', id), { isDeleted: true });
+      setToast({ message: 'Message déplacé vers la corbeille.', type: 'success' });
+      setSelectedMessage(null);
+    } catch (err) {
+      setToast({ message: 'Erreur lors de la mise à la corbeille.', type: 'error' });
+      console.error(err);
+    }
+  };
+
+  // ========================
+  // LOGIQUE FILTRES
+  // ========================
   const sortedAndFilteredReservations = useMemo(() => {
     let filtered = [...reservations];
-
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -369,7 +395,6 @@ export default function AdminDashboard() {
           res.flights.some((f) => f.to.toLowerCase().includes(q) || f.from.toLowerCase().includes(q))
       );
     }
-
     if (dateFrom || dateTo) {
       filtered = filtered.filter((res) => {
         const createdAt = res.createdAt?.toDate?.();
@@ -382,7 +407,6 @@ export default function AdminDashboard() {
         return true;
       });
     }
-
     return filtered.sort((a, b) => {
       let aValue: any, bValue: any;
       switch (sortBy) {
@@ -430,7 +454,6 @@ export default function AdminDashboard() {
   // ========================
   // RENDER
   // ========================
-
   if (loadingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -481,8 +504,20 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* 🔸 SIDEBAR DESKTOP (pliable) */}
+    <div className="flex min-h-screen bg-gray-50 relative">
+      {/* 🔸 TOAST */}
+      {toast && (
+        <div
+          className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg text-white font-medium shadow-lg ${
+            toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+          }`}
+          style={{ animation: 'fadeInOut 3s forwards' }}
+        >
+          {toast.message}
+        </div>
+      )}
+
+      {/* 🔸 SIDEBAR DESKTOP */}
       <div
         className={`hidden md:flex flex-col bg-white shadow-md border-r border-gray-200 transition-all duration-300 ease-in-out ${
           isCollapsed ? 'w-16' : 'w-64'
@@ -498,19 +533,17 @@ export default function AdminDashboard() {
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="text-gray-500 hover:text-gray-800 p-1 rounded-md hover:bg-gray-100"
-            aria-label={isCollapsed ? "Agrandir le menu" : "Réduire le menu"}
+            aria-label={isCollapsed ? 'Agrandir le menu' : 'Réduire le menu'}
           >
-            {isCollapsed ? (
-              <ChevronRightIcon className="h-5 w-5" />
-            ) : (
-              <ChevronLeftIcon className="h-5 w-5" />
-            )}
+            {isCollapsed ? <ChevronRightIcon className="h-5 w-5" /> : <ChevronLeftIcon className="h-5 w-5" />}
           </button>
         </div>
-
         <nav className="flex-1 p-2 space-y-1">
           <button
-            onClick={() => setActiveTab('reservations')}
+            onClick={() => {
+              setActiveTab('reservations');
+              setIsSidebarOpen(false);
+            }}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition ${
               activeTab === 'reservations'
                 ? 'bg-orange-100 text-[#ff781d] font-medium'
@@ -521,7 +554,10 @@ export default function AdminDashboard() {
             {!isCollapsed && <span>Réservations ({reservations.length})</span>}
           </button>
           <button
-            onClick={() => setActiveTab('messages')}
+            onClick={() => {
+              setActiveTab('messages');
+              setIsSidebarOpen(false);
+            }}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition ${
               activeTab === 'messages'
                 ? 'bg-orange-100 text-[#ff781d] font-medium'
@@ -531,8 +567,25 @@ export default function AdminDashboard() {
             <ChatBubbleLeftRightIcon className="h-5 w-5" />
             {!isCollapsed && <span>Messages ({messages.length})</span>}
           </button>
+          <button
+            onClick={() => {
+              setActiveTab('trash');
+              setIsSidebarOpen(false);
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition ${
+              activeTab === 'trash'
+                ? 'bg-orange-100 text-[#ff781d] font-medium'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <ArchiveBoxIcon className="h-5 w-5" />
+            {!isCollapsed && (
+              <span>
+                Corbeille ({deletedReservations.length + deletedMessages.length})
+              </span>
+            )}
+          </button>
         </nav>
-
         <div className="p-2 border-t border-gray-200">
           <button
             onClick={handleLogout}
@@ -543,84 +596,92 @@ export default function AdminDashboard() {
           </button>
         </div>
       </div>
-      
-{/* 🔸 BOUTON HAMBURGER (toujours en haut à gauche sur mobile) */}
-<button
-  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-  className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
-  aria-label={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
->
-  <Bars3Icon className="h-6 w-6 text-gray-700" />
-</button>
-{/* 🔸 OVERLAY MOBILE (ferme le menu au clic) */}
-{isSidebarOpen && (
-  <div
-    className="fixed inset-0 bg-black/30 z-40 md:hidden"
-    onClick={() => setIsSidebarOpen(false)}
-  />
-)}
 
-{/* 🔸 SIDEBAR MOBILE — Largeur élégante, pas full width */}
-<div
-  ref={sidebarRef}
-  className={`fixed md:hidden z-50 top-0 left-0 h-full w-[280px] max-w-[90vw] bg-white shadow-xl border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out ${
-    isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-  }`}
->
-  <div className="p-5 border-b border-gray-200">
-    <h2 className="text-lg font-bold text-gray-900">Exitravel Pro</h2>
-    <p className="text-xs text-gray-500">Tableau de bord</p>
-  </div>
-  <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-    <button
-      onClick={() => {
-        setActiveTab('reservations');
-        setIsSidebarOpen(false);
-      }}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
-        activeTab === 'reservations'
-          ? 'bg-orange-100 text-[#ff781d] font-medium'
-          : 'text-gray-700 hover:bg-gray-100'
-      }`}
-    >
-      <DocumentTextIcon className="h-5 w-5" />
-      Réservations ({reservations.length})
-    </button>
-    <button
-      onClick={() => {
-        setActiveTab('messages');
-        setIsSidebarOpen(false);
-      }}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
-        activeTab === 'messages'
-          ? 'bg-orange-100 text-[#ff781d] font-medium'
-          : 'text-gray-700 hover:bg-gray-100'
-      }`}
-    >
-      <ChatBubbleLeftRightIcon className="h-5 w-5" />
-      Messages ({messages.length})
-    </button>
-  </nav>
-  <div className="p-4 border-t border-gray-200">
-    <button
-      onClick={handleLogout}
-      className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-xl transition"
-    >
-      <ArrowLeftOnRectangleIcon className="h-5 w-5" />
-      Déconnexion
-    </button>
-  </div>
-</div>
+      {/* 🔸 MOBILE MENU BUTTON */}
+      <button
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
+        aria-label={isSidebarOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+      >
+        <Bars3Icon className="h-6 w-6 text-gray-700" />
+      </button>
 
+      {/* 🔸 OVERLAY MOBILE */}
+      {isSidebarOpen && <div className="fixed inset-0 bg-black/30 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />}
+
+      {/* 🔸 SIDEBAR MOBILE */}
+      <div
+        ref={sidebarRef}
+        className={`fixed md:hidden z-50 top-0 left-0 h-full w-[280px] max-w-[90vw] bg-white shadow-xl border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="p-5 border-b border-gray-200">
+          <h2 className="text-lg font-bold text-gray-900">Exitravel Pro</h2>
+          <p className="text-xs text-gray-500">Tableau de bord</p>
+        </div>
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <button
+            onClick={() => {
+              setActiveTab('reservations');
+              setIsSidebarOpen(false);
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
+              activeTab === 'reservations'
+                ? 'bg-orange-100 text-[#ff781d] font-medium'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <DocumentTextIcon className="h-5 w-5" />
+            Réservations ({reservations.length})
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('messages');
+              setIsSidebarOpen(false);
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
+              activeTab === 'messages'
+                ? 'bg-orange-100 text-[#ff781d] font-medium'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <ChatBubbleLeftRightIcon className="h-5 w-5" />
+            Messages ({messages.length})
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('trash');
+              setIsSidebarOpen(false);
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
+              activeTab === 'trash'
+                ? 'bg-orange-100 text-[#ff781d] font-medium'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <ArchiveBoxIcon className="h-5 w-5" />
+            Corbeille ({deletedReservations.length + deletedMessages.length})
+          </button>
+        </nav>
+        <div className="p-4 border-t border-gray-200">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-xl transition"
+          >
+            <ArrowLeftOnRectangleIcon className="h-5 w-5" />
+            Déconnexion
+          </button>
+        </div>
+      </div>
 
       {/* 🔸 CONTENU PRINCIPAL */}
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <audio ref={audioRef} src="/notification.mp3" />
-
-       
-
         <div className="max-w-7xl mx-auto">
-          {activeTab === 'reservations' ? (
+
+          {/* RÉSERVATIONS */}
+          {activeTab === 'reservations' && (
             <>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
@@ -631,7 +692,7 @@ export default function AdminDashboard() {
                   <p className="text-gray-500 text-sm mt-1">Historique complet, jamais perdu.</p>
                 </div>
                 <button
-                  onClick={() => exportToCSV([...sortedAndFilteredReservations])} // ✅ Spread pour garantir array
+                  onClick={() => exportToCSV([...sortedAndFilteredReservations])}
                   className="flex items-center gap-2 px-4 py-2.5 bg-gray-800 text-white rounded-xl text-sm font-medium hover:bg-gray-700 transition shadow-sm"
                 >
                   <ArrowDownTrayIcon className="h-4 w-4" />
@@ -695,7 +756,6 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
-
                   {loadingReservations ? (
                     <div className="bg-white rounded-2xl shadow border border-gray-200 p-12 text-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#ff781d] mx-auto"></div>
@@ -704,7 +764,9 @@ export default function AdminDashboard() {
                   ) : (
                     <div className="overflow-x-auto rounded-2xl shadow border border-gray-200">
                       <div className="px-4 py-3 text-sm text-gray-600 bg-gray-50 border-b border-gray-200">
-                        {sortedAndFilteredReservations.length} réservation{sortedAndFilteredReservations.length > 1 ? 's' : ''} affichée{sortedAndFilteredReservations.length > 1 ? 's' : ''}
+                        {sortedAndFilteredReservations.length} réservation
+                        {sortedAndFilteredReservations.length > 1 ? 's' : ''} affichée
+                        {sortedAndFilteredReservations.length > 1 ? 's' : ''}
                       </div>
                       <table className="min-w-full bg-white text-sm">
                         <thead className="bg-gray-50">
@@ -788,7 +850,6 @@ export default function AdminDashboard() {
                           <XMarkIcon className="h-6 w-6" />
                         </button>
                       </div>
-
                       <div className="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
                         <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${STATUS_COLORS[selectedReservation.status]}`}>
                           {STATUS_LABELS[selectedReservation.status]}
@@ -818,9 +879,15 @@ export default function AdminDashboard() {
                             <XCircleIcon className="h-4 w-4" />
                             Rejeter
                           </button>
+                          <button
+                            onClick={() => softDeleteReservation(selectedReservation.id)}
+                            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                            Mettre à la corbeille
+                          </button>
                         </div>
                       </div>
-
                       <div className="mb-6 p-4 bg-gray-50 rounded-xl">
                         <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                           <UserIcon className="h-5 w-5 text-gray-900" /> Informations client
@@ -832,13 +899,11 @@ export default function AdminDashboard() {
                           <p><span className="font-medium text-gray-900">Téléphone :</span> {selectedReservation.contact.telephone}</p>
                         </div>
                       </div>
-
                       <div className="mb-6">
                         <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                           <MapPinIcon className="h-5 w-5 text-gray-900" /> Détails du voyage
                         </h3>
                         <p className="mb-3 text-gray-900"><span className="font-medium">Type :</span> {TRIP_TYPE_LABELS[selectedReservation.tripType]}</p>
-
                         {selectedReservation.tripType === 'multi' ? (
                           <div className="mb-3">
                             <span className="font-medium text-gray-900">Classes :</span>
@@ -856,14 +921,12 @@ export default function AdminDashboard() {
                             {CABIN_LABELS[selectedReservation.flights[0]?.cabinClass] || '—'}
                           </p>
                         )}
-
                         <p className="mb-4 text-gray-900">
                           <span className="font-medium">Voyageurs :</span>
                           {selectedReservation.travelers.adultes > 0 && ` ${selectedReservation.travelers.adultes} adulte(s)`}
                           {selectedReservation.travelers.enfants > 0 && `, ${selectedReservation.travelers.enfants} enfant(s)`}
                           {selectedReservation.travelers.bebes > 0 && `, ${selectedReservation.travelers.bebes} bébé(s)`}
                         </p>
-
                         <div className="space-y-4">
                           {selectedReservation.flights.map((flight, idx) => (
                             <div key={idx} className="p-4 border-l-4 border-[#ff781d] bg-white rounded-r-lg shadow-sm">
@@ -890,7 +953,10 @@ export default function AdminDashboard() {
                 </div>
               )}
             </>
-          ) : (
+          )}
+
+          {/* MESSAGES */}
+          {activeTab === 'messages' && (
             <>
               <div className="flex justify-between items-center mb-6">
                 <div>
@@ -901,7 +967,6 @@ export default function AdminDashboard() {
                   <p className="text-gray-500 text-sm mt-1">Reçus depuis le site exitravel.net</p>
                 </div>
               </div>
-
               {loadingMessages ? (
                 <div className="bg-white rounded-2xl shadow border border-gray-200 p-12 text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#ff781d] mx-auto"></div>
@@ -993,6 +1058,15 @@ export default function AdminDashboard() {
                             ? format(selectedMessage.createdAt.toDate(), 'dd/MM/yyyy à HH:mm', { locale: fr })
                             : '—'}
                         </div>
+                        <div className="pt-4 flex justify-end">
+                          <button
+                            onClick={() => softDeleteMessage(selectedMessage.id)}
+                            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                            Mettre à la corbeille
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1001,11 +1075,152 @@ export default function AdminDashboard() {
             </>
           )}
 
+          {/* CORBEILLE */}
+          {activeTab === 'trash' && (
+            <div className="space-y-8">
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
+                  <ArchiveBoxIcon className="h-8 w-8 text-[#ff781d]" />
+                  Corbeille
+                </h1>
+                <p className="text-gray-600">
+                  {deletedReservations.length + deletedMessages.length} élément
+                  {deletedReservations.length + deletedMessages.length !== 1 ? 's' : ''} supprimé
+                  {deletedReservations.length + deletedMessages.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+
+              {/* Réservations supprimées */}
+              {deletedReservations.length > 0 && (
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800 mb-3">Réservations supprimées</h2>
+                  <div className="bg-white rounded-2xl shadow border border-gray-200 overflow-hidden">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left">Client</th>
+                          <th className="px-4 py-3 text-left">Date</th>
+                          <th className="px-4 py-3 text-left">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {deletedReservations.map((res) => (
+                          <tr key={res.id}>
+                            <td className="px-4 py-3">{res.contact.prenom} {res.contact.nom}</td>
+                            <td className="px-4 py-3">
+                              {res.createdAt?.toDate ? format(res.createdAt.toDate(), 'dd/MM/yyyy', { locale: fr }) : '—'}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => updateDoc(doc(db, 'reservations', res.id), { isDeleted: false })}
+                                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                >
+                                  Restaurer
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (window.confirm('⚠️ Supprimer définitivement ? Cette action est irréversible.')) {
+                                      try {
+                                        await deleteDoc(doc(db, 'reservations', res.id));
+                                        setToast({ message: 'Supprimé définitivement.', type: 'success' });
+                                      } catch (err) {
+                                        setToast({ message: 'Erreur.', type: 'error' });
+                                      }
+                                    }
+                                  }}
+                                  className="text-sm text-red-600 hover:text-red-800 font-medium"
+                                >
+                                  Supprimer
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Messages supprimés */}
+              {deletedMessages.length > 0 && (
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800 mb-3">Messages supprimés</h2>
+                  <div className="bg-white rounded-2xl shadow border border-gray-200 overflow-hidden">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left">Expéditeur</th>
+                          <th className="px-4 py-3 text-left">Date</th>
+                          <th className="px-4 py-3 text-left">Aperçu</th>
+                          <th className="px-4 py-3 text-left">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {deletedMessages.map((msg) => (
+                          <tr key={msg.id}>
+                            <td className="px-4 py-3">{msg.prenom} {msg.nom}</td>
+                            <td className="px-4 py-3">
+                              {msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'dd/MM/yyyy', { locale: fr }) : '—'}
+                            </td>
+                            <td className="px-4 py-3 max-w-xs truncate">{msg.message.substring(0, 50)}...</td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => updateDoc(doc(db, 'messages', msg.id), { isDeleted: false })}
+                                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                >
+                                  Restaurer
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (window.confirm('⚠️ Supprimer définitivement ?')) {
+                                      try {
+                                        await deleteDoc(doc(db, 'messages', msg.id));
+                                        setToast({ message: 'Supprimé définitivement.', type: 'success' });
+                                      } catch (err) {
+                                        setToast({ message: 'Erreur.', type: 'error' });
+                                      }
+                                    }
+                                  }}
+                                  className="text-sm text-red-600 hover:text-red-800 font-medium"
+                                >
+                                  Supprimer
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {deletedReservations.length === 0 && deletedMessages.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  La corbeille est vide.
+                </div>
+              )}
+            </div>
+          )}
+
           <footer className="mt-8 text-center text-gray-500 text-sm">
             ✈️ Exitravel — Tableau de bord professionnel. Historique jamais perdu.
           </footer>
         </div>
       </div>
+
+      {/* 🔸 ANIMATION TOAST */}
+      <style jsx global>{`
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translateY(10px); }
+          10% { opacity: 1; transform: translateY(0); }
+          90% { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(10px); }
+        }
+      `}</style>
     </div>
   );
 }
