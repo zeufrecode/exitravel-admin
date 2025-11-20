@@ -784,291 +784,324 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto">
           {/* RÉSERVATIONS */}
           {activeTab === 'reservations' && (
-            <>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
-                    <DocumentTextIcon className="h-8 w-8 text-[#ff781d]" />
-                    Réservations
-                  </h1>
-                  <p className="text-gray-500 text-sm mt-1">Historique complet, jamais perdu.</p>
-                </div>
+  <>
+    {/* HEADER */}
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <DocumentTextIcon className="h-8 w-8 text-[#ff781d]" />
+          Réservations
+        </h1>
+        <p className="text-gray-500 text-sm mt-1">Historique complet, jamais perdu.</p>
+      </div>
+
+      <button
+        onClick={() => exportToCSV([...sortedAndFilteredReservations])}
+        className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-800 text-white rounded-xl text-sm font-medium hover:bg-gray-700 transition shadow-sm"
+      >
+        <ArrowDownTrayIcon className="h-4 w-4" />
+        Export CSV
+      </button>
+    </div>
+
+    {/* STATS — mobile grid optimisée */}
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
+      <StatCard title="Total" value={stats.total} icon={DocumentTextIcon} color="bg-indigo-100 text-indigo-800" />
+      <StatCard title="Cette semaine" value={stats.thisWeek} icon={CalendarIcon} color="bg-purple-100 text-purple-800" />
+      <StatCard title="En attente" value={stats.pending} icon={ClockIcon} color="bg-yellow-100 text-yellow-800" />
+      <StatCard title="Confirmées" value={stats.confirmed} icon={CheckCircleIcon} color="bg-green-100 text-green-800" />
+      <StatCard title="Rejetées" value={stats.rejected} icon={XCircleIcon} color="bg-red-100 text-red-800" />
+    </div>
+
+    {/* FILTRES — Full responsive */}
+    <div className="grid grid-cols-1 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-200 mb-6">
+      <input
+        type="text"
+        placeholder="Rechercher (client, destination...)"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
+      />
+
+      <div className="grid grid-cols-2 gap-3">
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
+        >
+          <option value="date">Trier par date</option>
+          <option value="status">Statut</option>
+          <option value="tripType">Type de voyage</option>
+          <option value="destination">Destination</option>
+          <option value="client">Client</option>
+        </select>
+
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
+        >
+          <option value="desc">↓ Récent</option>
+          <option value="asc">↑ Ancien</option>
+        </select>
+      </div>
+    </div>
+
+    {/* CONTENT */}
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+      <div className="lg:col-span-3">
+        {loadingReservations ? (
+          <div className="bg-white rounded-2xl shadow border border-gray-200 p-12 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#ff781d] mx-auto"></div>
+            <p className="mt-4 text-gray-600">Chargement...</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl shadow border border-gray-200">
+            <div className="px-4 py-3 text-sm text-gray-600 bg-gray-50 border-b border-gray-200">
+              {sortedAndFilteredReservations.length} réservation
+              {sortedAndFilteredReservations.length > 1 ? 's' : ''} affichée
+              {sortedAndFilteredReservations.length > 1 ? 's' : ''}.
+            </div>
+
+            {/* TABLE — scroll mobile */}
+            <table className="min-w-full bg-white text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Client</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Type</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Destination</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Date</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Statut</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-gray-200">
+                {sortedAndFilteredReservations.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                      Aucune réservation trouvée.
+                    </td>
+                  </tr>
+                ) : (
+                  sortedAndFilteredReservations.map((res) => (
+                    <tr
+                      key={res.id}
+                      onClick={() => setSelectedReservation(res)}
+                      className="hover:bg-orange-50 cursor-pointer transition-colors"
+                    >
+                      <td className="px-4 py-4">
+                        <div className="font-medium text-gray-900">
+                          {res.contact.prenom} {res.contact.nom}
+                        </div>
+                        <div className="text-gray-500 text-xs">{res.contact.email}</div>
+                      </td>
+
+                      <td className="px-4 py-4 text-gray-800">{TRIP_TYPE_LABELS[res.tripType]}</td>
+
+                      <td className="px-4 py-4 text-gray-800">{res.flights[0]?.to || '—'}</td>
+
+                      <td className="px-4 py-4 text-gray-600">
+                        {res.createdAt?.toDate
+                          ? format(res.createdAt.toDate(), 'dd MMM yyyy', { locale: fr })
+                          : '—'}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <span className={`px-2.5 py-1 inline-flex text-xs font-medium rounded-full ${STATUS_COLORS[res.status]}`}>
+                          {STATUS_LABELS[res.status]}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <TopDestinations reservations={reservations} />
+      </div>
+    </div>
+
+    {/* MODALE — parfaitement responsive */}
+    {selectedReservation && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-4 bg-black/40 backdrop-blur-sm"
+        onClick={() => setSelectedReservation(null)}
+      >
+        <div
+          className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-auto mt-10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-5 sm:p-6">
+
+            {/* MODAL HEADER */}
+            <div className="flex justify-between items-start mb-5">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Détails de la réservation</h2>
+                <p className="text-gray-500 text-sm">ID : {selectedReservation.id}</p>
+              </div>
+
+              <button
+                onClick={() => setSelectedReservation(null)}
+                className="text-gray-400 hover:text-gray-700 rounded-full p-1.5 hover:bg-gray-100 transition"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* BADGES */}
+            <div className="mb-4 flex flex-wrap gap-2">
+              <ContactBadge type="email" value={selectedReservation.contact.email} link={`mailto:${selectedReservation.contact.email}`} />
+              {selectedReservation.contact.telephone && (
+                <ContactBadge type="phone" value={selectedReservation.contact.telephone} link={`tel:${selectedReservation.contact.telephone.replace(/\s+/g, '')}`} />
+              )}
+            </div>
+
+            {/* STATUS + ACTIONS */}
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-4 items-start sm:items-center mb-6 p-4 bg-gray-50 rounded-xl">
+              <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${STATUS_COLORS[selectedReservation.status]}`}>
+                {STATUS_LABELS[selectedReservation.status]}
+              </span>
+
+              <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => exportToCSV([...sortedAndFilteredReservations])}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-800 text-white rounded-xl text-sm font-medium hover:bg-gray-700 transition shadow-sm"
+                  onClick={() => updateStatus(selectedReservation.id, 'confirmed')}
+                  disabled={selectedReservation.status !== 'pending'}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                    selectedReservation.status !== 'pending'
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}
                 >
-                  <ArrowDownTrayIcon className="h-4 w-4" />
-                  Export CSV
+                  <CheckCircleIcon className="h-4 w-4" />
+                  Confirmer
+                </button>
+
+                <button
+                  onClick={() => updateStatus(selectedReservation.id, 'rejected')}
+                  disabled={selectedReservation.status !== 'pending'}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                    selectedReservation.status !== 'pending'
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-red-600 text-white hover:bg-red-700'
+                  }`}
+                >
+                  <XCircleIcon className="h-4 w-4" />
+                  Rejeter
+                </button>
+
+                <button
+                  onClick={() => softDeleteReservation(selectedReservation.id)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                  Corbeille
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-                <StatCard title="Total" value={stats.total} icon={DocumentTextIcon} color="bg-indigo-100 text-indigo-800" />
-                <StatCard title="Cette semaine" value={stats.thisWeek} icon={CalendarIcon} color="bg-purple-100 text-purple-800" />
-                <StatCard title="En attente" value={stats.pending} icon={ClockIcon} color="bg-yellow-100 text-yellow-800" />
-                <StatCard title="Confirmées" value={stats.confirmed} icon={CheckCircleIcon} color="bg-green-100 text-green-800" />
-                <StatCard title="Rejetées" value={stats.rejected} icon={XCircleIcon} color="bg-red-100 text-red-800" />
+            </div>
+
+            {/* INFOS CLIENT */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-xl">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <UserIcon className="h-5 w-5" /> Informations client
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <p><span className="font-medium">Nom :</span> {selectedReservation.contact.nom}</p>
+                <p><span className="font-medium">Prénom :</span> {selectedReservation.contact.prenom}</p>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-                <div className="lg:col-span-3">
-                  <div className="mb-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
-                    <div className="flex flex-col md:flex-row gap-4 flex-wrap items-start md:items-center">
-                      <input
-                        type="text"
-                        placeholder="Rechercher (client, destination...)"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full md:w-64 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
-                      />
-                      <div className="flex gap-2 w-full md:w-auto">
-                        <input
-                          type="date"
-                          value={dateFrom}
-                          onChange={(e) => setDateFrom(e.target.value)}
-                          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
-                        />
-                        <input
-                          type="date"
-                          value={dateTo}
-                          onChange={(e) => setDateTo(e.target.value)}
-                          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-3 w-full md:w-auto">
-                        <select
-                          value={sortBy}
-                          onChange={(e) => setSortBy(e.target.value as any)}
-                          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
-                        >
-                          <option value="date">Trier par date</option>
-                          <option value="status">Statut</option>
-                          <option value="tripType">Type de voyage</option>
-                          <option value="destination">Destination</option>
-                          <option value="client">Client</option>
-                        </select>
-                        <select
-                          value={sortOrder}
-                          onChange={(e) => setSortOrder(e.target.value as any)}
-                          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
-                        >
-                          <option value="desc">↓ Récent</option>
-                          <option value="asc">↑ Ancien</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                  {loadingReservations ? (
-                    <div className="bg-white rounded-2xl shadow border border-gray-200 p-12 text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#ff781d] mx-auto"></div>
-                      <p className="mt-4 text-gray-600">Chargement...</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto rounded-2xl shadow border border-gray-200">
-                      <div className="px-4 py-3 text-sm text-gray-600 bg-gray-50 border-b border-gray-200">
-                        {sortedAndFilteredReservations.length} réservation{sortedAndFilteredReservations.length > 1 ? 's' : ''} affichée{sortedAndFilteredReservations.length > 1 ? 's' : ''}
-                      </div>
-                      <table className="min-w-full bg-white text-sm">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Client</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Destination</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Statut</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {sortedAndFilteredReservations.length === 0 ? (
-                            <tr>
-                              <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
-                                Aucune réservation trouvée.
-                              </td>
-                            </tr>
-                          ) : (
-                            sortedAndFilteredReservations.map((res) => (
-                              <tr
-                                key={res.id}
-                                onClick={() => setSelectedReservation(res)}
-                                className="hover:bg-orange-50 cursor-pointer transition-colors"
-                              >
-                                <td className="px-4 py-4">
-                                  <div className="font-medium text-gray-900">{res.contact.prenom} {res.contact.nom}</div>
-                                  <div className="text-gray-500">{res.contact.email}</div>
-                                </td>
-                                <td className="px-4 py-4 text-gray-800">{TRIP_TYPE_LABELS[res.tripType]}</td>
-                                <td className="px-4 py-4 text-gray-800">{res.flights[0]?.to || '—'}</td>
-                                <td className="px-4 py-4 text-gray-600">
-                                  {res.createdAt?.toDate
-                                    ? format(res.createdAt.toDate(), 'dd MMM yyyy', { locale: fr })
-                                    : '—'}
-                                </td>
-                                <td className="px-4 py-4">
-                                  <span className={`px-2.5 py-1 inline-flex text-xs font-medium rounded-full ${STATUS_COLORS[res.status]}`}>
-                                    {STATUS_LABELS[res.status]}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+            </div>
+
+            {/* DÉTAILS VOYAGE */}
+            <div className="mb-6">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <MapPinIcon className="h-5 w-5" /> Détails du voyage
+              </h3>
+
+              <p className="mb-3"><span className="font-medium">Type :</span> {TRIP_TYPE_LABELS[selectedReservation.tripType]}</p>
+
+              {/* MULTI VOL */}
+              {selectedReservation.tripType === 'multi' ? (
+                <div className="mb-3">
+                  <span className="font-medium">Classes :</span>
+                  <ul className="mt-1 space-y-1 text-sm">
+                    {selectedReservation.flights.map((flight, idx) => (
+                      <li key={idx}>
+                        • {flight.from} → {flight.to}:{' '}
+                        <span className="font-medium">{CABIN_LABELS[flight.cabinClass]}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <div>
-                  <TopDestinations reservations={reservations} />
-                </div>
-              </div>
-              {/* MODALE RÉSERVATION */}
-                            {/* MODALE RÉSERVATION */}
-              {selectedReservation && (
-                <div
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="reservation-modal-title"
-                  className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 bg-black/40 backdrop-blur-sm"
-                  onClick={() => setSelectedReservation(null)}
-                >
-                  <div
-                    className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[92vh] overflow-auto mt-8"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="p-6">
-                      <div className="flex justify-between items-start mb-6">
-                        <div>
-                          <h2 id="reservation-modal-title" className="text-xl md:text-2xl font-bold text-gray-900">
-                            Détails de la réservation
-                          </h2>
-                          <p className="text-gray-500 text-sm">ID : {selectedReservation.id}</p>
-                        </div>
-                        <button
-                          onClick={() => setSelectedReservation(null)}
-                          className="text-gray-400 hover:text-gray-700 rounded-full p-1.5 hover:bg-gray-100 transition"
-                          aria-label="Fermer"
-                        >
-                          <XMarkIcon className="h-6 w-6" />
-                        </button>
-                      </div>
-
-                      {/* BADGES EMAIL + TÉLÉPHONE */}
-                      <div className="mb-4 flex flex-wrap gap-2">
-                        <ContactBadge type="email" value={selectedReservation.contact.email} link={`mailto:${selectedReservation.contact.email}`} />
-                        {selectedReservation.contact.telephone && (
-                          <ContactBadge type="phone" value={selectedReservation.contact.telephone} link={`tel:${selectedReservation.contact.telephone.replace(/\s+/g, '')}`} />
-                        )}
-                      </div>
-
-                      <div className="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4 mb-6 p-4 bg-gray-50 rounded-xl">
-                        <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${STATUS_COLORS[selectedReservation.status]}`}>
-                          {STATUS_LABELS[selectedReservation.status]}
-                        </span>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => updateStatus(selectedReservation.id, 'confirmed')}
-                            disabled={selectedReservation.status !== 'pending'}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
-                              selectedReservation.status !== 'pending'
-                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                : 'bg-green-600 text-white hover:bg-green-700'
-                            }`}
-                          >
-                            <CheckCircleIcon className="h-4 w-4" />
-                            Confirmer
-                          </button>
-                          <button
-                            onClick={() => updateStatus(selectedReservation.id, 'rejected')}
-                            disabled={selectedReservation.status !== 'pending'}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
-                              selectedReservation.status !== 'pending'
-                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                : 'bg-red-600 text-white hover:bg-red-700'
-                            }`}
-                          >
-                            <XCircleIcon className="h-4 w-4" />
-                            Rejeter
-                          </button>
-                          <button
-                            onClick={() => softDeleteReservation(selectedReservation.id)}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                            Corbeille
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* INFOS CLIENT */}
-                      <div className="mb-6 p-4 bg-gray-50 rounded-xl">
-                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                          <UserIcon className="h-5 w-5 text-gray-900" /> Informations client
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                          <p><span className="font-medium text-gray-900">Nom :</span> {selectedReservation.contact.nom}</p>
-                          <p><span className="font-medium text-gray-900">Prénom :</span> {selectedReservation.contact.prenom}</p>
-                        </div>
-                      </div>
-
-                      {/* DÉTAILS DU VOYAGE */}
-                      <div className="mb-6">
-                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                          <MapPinIcon className="h-5 w-5 text-gray-900" /> Détails du voyage
-                        </h3>
-                        <p className="mb-3 text-gray-900"><span className="font-medium">Type :</span> {TRIP_TYPE_LABELS[selectedReservation.tripType]}</p>
-                        {selectedReservation.tripType === 'multi' ? (
-                          <div className="mb-3">
-                            <span className="font-medium text-gray-900">Classes :</span>
-                            <ul className="mt-1 space-y-1">
-                              {selectedReservation.flights.map((flight, idx) => (
-                                <li key={idx} className="text-sm text-gray-900">
-                                  • {flight.from} → {flight.to}: <span className="font-medium">{CABIN_LABELS[flight.cabinClass]}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : (
-                          <p className="mb-3 text-gray-900">
-                            <span className="font-medium">Classe :</span>{' '}
-                            {CABIN_LABELS[selectedReservation.flights[0]?.cabinClass] || '—'}
-                          </p>
-                        )}
-                        <p className="mb-4 text-gray-900">
-                          <span className="font-medium">Voyageurs :</span>
-                          {selectedReservation.travelers.adultes > 0 && ` ${selectedReservation.travelers.adultes} adulte(s)`}
-                          {selectedReservation.travelers.enfants > 0 && `, ${selectedReservation.travelers.enfants} enfant(s)`}
-                          {selectedReservation.travelers.bebes > 0 && `, ${selectedReservation.travelers.bebes} bébé(s)`}
-                        </p>
-                        <div className="space-y-4">
-                          {selectedReservation.flights.map((flight, idx) => (
-                            <div key={idx} className="p-4 border-l-4 border-[#ff781d] bg-white rounded-r-lg shadow-sm">
-                              <p className="text-gray-900"><span className="font-medium">Départ :</span> {flight.from} ({flight.fromIata})</p>
-                              <p className="text-gray-900"><span className="font-medium">Destination :</span> {flight.to} ({flight.toIata})</p>
-                              <p className="text-gray-900">
-                                <span className="font-medium">Départ le :</span>{' '}
-                                {flight.departureDate?.toDate
-                                  ? format(flight.departureDate.toDate(), 'dd MMM yyyy', { locale: fr })
-                                  : '—'}
-                              </p>
-                              {flight.returnDate && (
-                                <p className="text-gray-900">
-                                  <span className="font-medium">Retour le :</span>{' '}
-                                  {format(flight.returnDate.toDate(), 'dd MMM yyyy', { locale: fr })}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* BOUTONS D'ACTION DIRECTE */}
-                      <ContactActions
-                        email={selectedReservation.contact.email}
-                        phone={selectedReservation.contact.telephone}
-                      />
-                    </div>
-                  </div>
-                </div>
+              ) : (
+                <p className="mb-3">
+                  <span className="font-medium">Classe :</span>{' '}
+                  {CABIN_LABELS[selectedReservation.flights[0]?.cabinClass] || '—'}
+                </p>
               )}
-            </>
-          )}
+
+              <p className="mb-4">
+                <span className="font-medium">Voyageurs :</span>
+                {selectedReservation.travelers.adultes > 0 && ` ${selectedReservation.travelers.adultes} adulte(s)`}
+                {selectedReservation.travelers.enfants > 0 && `, ${selectedReservation.travelers.enfants} enfant(s)`}
+                {selectedReservation.travelers.bebes > 0 && `, ${selectedReservation.travelers.bebes} bébé(s)`}
+              </p>
+
+              <div className="space-y-4">
+                {selectedReservation.flights.map((flight, idx) => (
+                  <div key={idx} className="p-4 border-l-4 border-[#ff781d] bg-white rounded-r-lg shadow-sm">
+                    <p><span className="font-medium">Départ :</span> {flight.from} ({flight.fromIata})</p>
+                    <p><span className="font-medium">Destination :</span> {flight.to} ({flight.toIata})</p>
+                    <p>
+                      <span className="font-medium">Départ le :</span>{' '}
+                      {flight.departureDate?.toDate
+                        ? format(flight.departureDate.toDate(), 'dd MMM yyyy', { locale: fr })
+                        : '—'}
+                    </p>
+
+                    {flight.returnDate && (
+                      <p>
+                        <span className="font-medium">Retour le :</span>{' '}
+                        {format(flight.returnDate.toDate(), 'dd MMM yyyy', { locale: fr })}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ACTIONS */}
+            <ContactActions
+              email={selectedReservation.contact.email}
+              phone={selectedReservation.contact.telephone}
+            />
+          </div>
+        </div>
+      </div>
+    )}
+  </>
+)}
+
 
           {/* MESSAGES */}
           {activeTab === 'messages' && (
