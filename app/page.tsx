@@ -543,30 +543,33 @@ export default function AdminDashboard() {
           </button>
         </div>
       </div>
+      
+{/* 🔸 BOUTON HAMBURGER (toujours en haut à gauche sur mobile) */}
+<button
+  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+  className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
+  aria-label={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
+>
+  <Bars3Icon className="h-6 w-6 text-gray-700" />
+</button>
+{/* 🔸 OVERLAY MOBILE (ferme le menu au clic) */}
+{isSidebarOpen && (
+  <div
+    className="fixed inset-0 bg-black/30 z-40 md:hidden"
+    onClick={() => setIsSidebarOpen(false)}
+  />
+)}
 
-      {/* 🔸 OVERLAY MOBILE */}
-      {isSidebarOpen && <div className="fixed inset-0 bg-black/30 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />}
-
-      {/* 🔸 SIDEBAR MOBILE */}
-      {/* 🔸 SIDEBAR MOBILE — Pleine largeur */}
+{/* 🔸 SIDEBAR MOBILE — Largeur élégante, pas full width */}
 <div
   ref={sidebarRef}
-  className={`fixed md:hidden z-50 bottom-0 top-0 ${
-    isSidebarOpen ? 'right-0' : '-right-full'
-  } w-[95%] max-w-sm bg-white shadow-2xl border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out rounded-l-2xl`}
+  className={`fixed md:hidden z-50 top-0 left-0 h-full w-[280px] max-w-[90vw] bg-white shadow-xl border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out ${
+    isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+  }`}
 >
-  <div className="p-5 border-b border-gray-200 flex justify-between items-center">
-    <div>
-      <h2 className="text-lg font-bold text-gray-900">Exitravel Pro</h2>
-      <p className="text-xs text-gray-500">Tableau de bord</p>
-    </div>
-    <button
-      onClick={() => setIsSidebarOpen(false)}
-      className="text-gray-500 hover:text-gray-800 p-1.5 rounded-full hover:bg-gray-100"
-      aria-label="Fermer le menu"
-    >
-      <XMarkIcon className="h-6 w-6" />
-    </button>
+  <div className="p-5 border-b border-gray-200">
+    <h2 className="text-lg font-bold text-gray-900">Exitravel Pro</h2>
+    <p className="text-xs text-gray-500">Tableau de bord</p>
   </div>
   <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
     <button
@@ -574,53 +577,47 @@ export default function AdminDashboard() {
         setActiveTab('reservations');
         setIsSidebarOpen(false);
       }}
-      className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition ${
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
         activeTab === 'reservations'
           ? 'bg-orange-100 text-[#ff781d] font-medium'
           : 'text-gray-700 hover:bg-gray-100'
       }`}
     >
       <DocumentTextIcon className="h-5 w-5" />
-      <span>Réservations ({reservations.length})</span>
+      Réservations ({reservations.length})
     </button>
     <button
       onClick={() => {
         setActiveTab('messages');
         setIsSidebarOpen(false);
       }}
-      className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition ${
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
         activeTab === 'messages'
           ? 'bg-orange-100 text-[#ff781d] font-medium'
           : 'text-gray-700 hover:bg-gray-100'
       }`}
     >
       <ChatBubbleLeftRightIcon className="h-5 w-5" />
-      <span>Messages ({messages.length})</span>
+      Messages ({messages.length})
     </button>
   </nav>
   <div className="p-4 border-t border-gray-200">
     <button
       onClick={handleLogout}
-      className="w-full flex items-center gap-3 px-4 py-3.5 text-gray-700 hover:bg-gray-100 rounded-xl transition"
+      className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-xl transition"
     >
       <ArrowLeftOnRectangleIcon className="h-5 w-5" />
-      <span>Déconnexion</span>
+      Déconnexion
     </button>
   </div>
 </div>
+
 
       {/* 🔸 CONTENU PRINCIPAL */}
       <div className="flex-1 overflow-auto p-4 md:p-6">
         <audio ref={audioRef} src="/notification.mp3" />
 
-        {/* 🔸 MOBILE MENU BUTTON */}
-        <button
-          onClick={() => setIsSidebarOpen(true)}
-          className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
-          aria-label="Ouvrir le menu"
-        >
-          <Bars3Icon className="h-6 w-6 text-gray-700" />
-        </button>
+       
 
         <div className="max-w-7xl mx-auto">
           {activeTab === 'reservations' ? (
