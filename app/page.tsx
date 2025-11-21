@@ -71,7 +71,7 @@ type Message = {
   message: string;
   createdAt: any;
   isDeleted?: boolean;
-  isRead?: boolean; // ✨ champ ajouté
+  isRead?: boolean;
 };
 
 // ========================
@@ -82,16 +82,19 @@ const STATUS_LABELS: Record<string, string> = {
   confirmed: 'Confirmé',
   rejected: 'Rejeté',
 };
+
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
 };
+
 const TRIP_TYPE_LABELS: Record<string, string> = {
   round: 'Aller-retour',
   oneWay: 'Aller simple',
   multi: 'Multiville',
 };
+
 const CABIN_LABELS: Record<string, string> = {
   eco: 'Éco',
   ecoPremium: 'Éco Premium',
@@ -113,11 +116,10 @@ const ContactBadge = ({
 }) => (
   <a
     href={link}
-    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition ${
-      type === 'email'
-        ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-        : 'bg-green-50 text-green-700 hover:bg-green-100'
-    } border border-transparent hover:border-current`}
+    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition ${type === 'email'
+      ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+      : 'bg-green-50 text-green-700 hover:bg-green-100'
+      } border border-transparent hover:border-current`}
   >
     {type === 'email' ? (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -228,7 +230,9 @@ const TopDestinations = ({ reservations }: { reservations: Reservation[] }) => {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
   }, [reservations]);
+
   if (destinations.length === 0) return null;
+
   return (
     <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
       <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -252,6 +256,7 @@ const TopDestinations = ({ reservations }: { reservations: Reservation[] }) => {
 // ========================
 const exportToCSV = (reservations: Reservation[]) => {
   if (reservations.length === 0) return;
+
   const headers = [
     'ID',
     'Date',
@@ -264,6 +269,7 @@ const exportToCSV = (reservations: Reservation[]) => {
     'Voyageurs (Adultes/Enfants/Bébés)',
     'Détail des vols (Départ → Destination | Classe | Date)',
   ];
+
   const rows = reservations.map((res) => {
     const createdAt = res.createdAt?.toDate?.();
     const date = createdAt ? format(createdAt, 'dd/MM/yyyy', { locale: fr }) : '';
@@ -276,6 +282,7 @@ const exportToCSV = (reservations: Reservation[]) => {
         return `${f.from} → ${f.to} | ${cls} | ${depDateStr}`;
       })
       .join(' ; ');
+
     return [
       res.id,
       date,
@@ -291,6 +298,7 @@ const exportToCSV = (reservations: Reservation[]) => {
       .map((field) => `"${String(field ?? '').replace(/"/g, '""')}"`)
       .join(';');
   });
+
   const csvContent = ['\uFEFF' + headers.join(';'), ...rows].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -316,6 +324,7 @@ export default function AdminDashboard() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+
   // Données
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [deletedReservations, setDeletedReservations] = useState<Reservation[]>([]);
@@ -323,9 +332,11 @@ export default function AdminDashboard() {
   const [deletedMessages, setDeletedMessages] = useState<Message[]>([]);
   const [loadingReservations, setLoadingReservations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(true);
+
   // Sélection
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+
   // UI
   const [activeTab, setActiveTab] = useState<'reservations' | 'messages' | 'trash'>('reservations');
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -336,6 +347,7 @@ export default function AdminDashboard() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
   // Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevReservationsLength = useRef(0);
@@ -374,6 +386,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!user) return;
+
     const reservationsUnsub = onSnapshot(
       query(collection(db, 'reservations'), orderBy('createdAt', 'desc')),
       (snapshot) => {
@@ -382,7 +395,7 @@ export default function AdminDashboard() {
         setDeletedReservations(allRes.filter(r => r.isDeleted));
         setLoadingReservations(false);
         if (allRes.filter(r => !r.isDeleted).length > prevReservationsLength.current && prevReservationsLength.current > 0) {
-          if (audioRef.current) audioRef.current.play().catch(() => {});
+          if (audioRef.current) audioRef.current.play().catch(() => { });
           if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
             new Notification('🆕 Nouvelle réservation !', { body: 'Une demande a été reçue.', icon: '/icon-192.png' });
           }
@@ -390,6 +403,7 @@ export default function AdminDashboard() {
         prevReservationsLength.current = allRes.filter(r => !r.isDeleted).length;
       }
     );
+
     const messagesUnsub = onSnapshot(
       query(collection(db, 'messages'), orderBy('createdAt', 'desc')),
       (snapshot) => {
@@ -398,7 +412,7 @@ export default function AdminDashboard() {
         setDeletedMessages(allMsg.filter(m => m.isDeleted));
         setLoadingMessages(false);
         if (allMsg.filter(m => !m.isDeleted).length > prevMessagesLength.current && prevMessagesLength.current > 0) {
-          if (audioRef.current) audioRef.current.play().catch(() => {});
+          if (audioRef.current) audioRef.current.play().catch(() => { });
           if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
             new Notification('📩 Nouveau message de contact !', { body: 'Un client vient de vous contacter.', icon: '/icon-192.png' });
           }
@@ -406,6 +420,7 @@ export default function AdminDashboard() {
         prevMessagesLength.current = allMsg.filter(m => !m.isDeleted).length;
       }
     );
+
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('/firebase-messaging-sw.js').then(() => {
         const messaging = getMessaging();
@@ -422,6 +437,7 @@ export default function AdminDashboard() {
         });
       });
     }
+
     return () => {
       reservationsUnsub();
       messagesUnsub();
@@ -565,6 +581,7 @@ export default function AdminDashboard() {
       </div>
     );
   }
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
@@ -611,9 +628,8 @@ export default function AdminDashboard() {
       {/* 🔸 TOAST */}
       {toast && (
         <div
-          className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg text-white font-medium shadow-lg ${
-            toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-          }`}
+          className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg text-white font-medium shadow-lg ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            }`}
           style={{ animation: 'fadeInOut 3s forwards' }}
         >
           {toast.message}
@@ -622,9 +638,8 @@ export default function AdminDashboard() {
 
       {/* 🔸 SIDEBAR DESKTOP */}
       <div
-        className={`hidden md:flex flex-col bg-white shadow-md border-r border-gray-200 transition-all duration-300 ease-in-out ${
-          isCollapsed ? 'w-16' : 'w-64'
-        }`}
+        className={`hidden md:flex flex-col bg-white shadow-md border-r border-gray-200 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-64'
+          }`}
       >
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           {!isCollapsed && (
@@ -647,11 +662,10 @@ export default function AdminDashboard() {
               setActiveTab('reservations');
               setIsSidebarOpen(false);
             }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition ${
-              activeTab === 'reservations'
-                ? 'bg-orange-100 text-[#ff781d] font-medium'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition ${activeTab === 'reservations'
+              ? 'bg-orange-100 text-[#ff781d] font-medium'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
           >
             <DocumentTextIcon className="h-5 w-5" />
             {!isCollapsed && <span>Réservations ({reservations.length})</span>}
@@ -661,11 +675,10 @@ export default function AdminDashboard() {
               setActiveTab('messages');
               setIsSidebarOpen(false);
             }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition ${
-              activeTab === 'messages'
-                ? 'bg-orange-100 text-[#ff781d] font-medium'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition ${activeTab === 'messages'
+              ? 'bg-orange-100 text-[#ff781d] font-medium'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
           >
             <ChatBubbleLeftRightIcon className="h-5 w-5" />
             {!isCollapsed && <span>Messages ({messages.length})</span>}
@@ -675,11 +688,10 @@ export default function AdminDashboard() {
               setActiveTab('trash');
               setIsSidebarOpen(false);
             }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition ${
-              activeTab === 'trash'
-                ? 'bg-orange-100 text-[#ff781d] font-medium'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition ${activeTab === 'trash'
+              ? 'bg-orange-100 text-[#ff781d] font-medium'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
           >
             <ArchiveBoxIcon className="h-5 w-5" />
             {!isCollapsed && (
@@ -715,9 +727,8 @@ export default function AdminDashboard() {
       {/* 🔸 SIDEBAR MOBILE */}
       <div
         ref={sidebarRef}
-        className={`fixed md:hidden z-50 top-0 left-0 h-full w-[280px] max-w-[90vw] bg-white shadow-xl border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed md:hidden z-50 top-0 left-0 h-full w-[280px] max-w-[90vw] bg-white shadow-xl border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         <div className="p-5 border-b border-gray-200">
           <h2 className="text-lg font-bold text-gray-900">Exitravel Pro</h2>
@@ -729,11 +740,10 @@ export default function AdminDashboard() {
               setActiveTab('reservations');
               setIsSidebarOpen(false);
             }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
-              activeTab === 'reservations'
-                ? 'bg-orange-100 text-[#ff781d] font-medium'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${activeTab === 'reservations'
+              ? 'bg-orange-100 text-[#ff781d] font-medium'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
           >
             <DocumentTextIcon className="h-5 w-5" />
             Réservations ({reservations.length})
@@ -743,11 +753,10 @@ export default function AdminDashboard() {
               setActiveTab('messages');
               setIsSidebarOpen(false);
             }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
-              activeTab === 'messages'
-                ? 'bg-orange-100 text-[#ff781d] font-medium'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${activeTab === 'messages'
+              ? 'bg-orange-100 text-[#ff781d] font-medium'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
           >
             <ChatBubbleLeftRightIcon className="h-5 w-5" />
             Messages ({messages.length})
@@ -757,11 +766,10 @@ export default function AdminDashboard() {
               setActiveTab('trash');
               setIsSidebarOpen(false);
             }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${
-              activeTab === 'trash'
-                ? 'bg-orange-100 text-[#ff781d] font-medium'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition ${activeTab === 'trash'
+              ? 'bg-orange-100 text-[#ff781d] font-medium'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
           >
             <ArchiveBoxIcon className="h-5 w-5" />
             Corbeille ({deletedReservations.length + deletedMessages.length})
@@ -784,324 +792,285 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto">
           {/* RÉSERVATIONS */}
           {activeTab === 'reservations' && (
-  <>
-    {/* HEADER */}
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
-          <DocumentTextIcon className="h-8 w-8 text-[#ff781d]" />
-          Réservations
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">Historique complet, jamais perdu.</p>
-      </div>
-
-      <button
-        onClick={() => exportToCSV([...sortedAndFilteredReservations])}
-        className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-800 text-white rounded-xl text-sm font-medium hover:bg-gray-700 transition shadow-sm"
-      >
-        <ArrowDownTrayIcon className="h-4 w-4" />
-        Export CSV
-      </button>
-    </div>
-
-    {/* STATS — mobile grid optimisée */}
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
-      <StatCard title="Total" value={stats.total} icon={DocumentTextIcon} color="bg-indigo-100 text-indigo-800" />
-      <StatCard title="Cette semaine" value={stats.thisWeek} icon={CalendarIcon} color="bg-purple-100 text-purple-800" />
-      <StatCard title="En attente" value={stats.pending} icon={ClockIcon} color="bg-yellow-100 text-yellow-800" />
-      <StatCard title="Confirmées" value={stats.confirmed} icon={CheckCircleIcon} color="bg-green-100 text-green-800" />
-      <StatCard title="Rejetées" value={stats.rejected} icon={XCircleIcon} color="bg-red-100 text-red-800" />
-    </div>
-
-    {/* FILTRES — Full responsive */}
-    <div className="grid grid-cols-1 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-200 mb-6">
-      <input
-        type="text"
-        placeholder="Rechercher (client, destination...)"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
-      />
-
-      <div className="grid grid-cols-2 gap-3">
-        <input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
-        />
-        <input
-          type="date"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
-        >
-          <option value="date">Trier par date</option>
-          <option value="status">Statut</option>
-          <option value="tripType">Type de voyage</option>
-          <option value="destination">Destination</option>
-          <option value="client">Client</option>
-        </select>
-
-        <select
-          value={sortOrder}
-          onChange={(e) => setSortOrder(e.target.value)}
-          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
-        >
-          <option value="desc">↓ Récent</option>
-          <option value="asc">↑ Ancien</option>
-        </select>
-      </div>
-    </div>
-
-    {/* CONTENT */}
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-      <div className="lg:col-span-3">
-        {loadingReservations ? (
-          <div className="bg-white rounded-2xl shadow border border-gray-200 p-12 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#ff781d] mx-auto"></div>
-            <p className="mt-4 text-gray-600">Chargement...</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-2xl shadow border border-gray-200">
-            <div className="px-4 py-3 text-sm text-gray-600 bg-gray-50 border-b border-gray-200">
-              {sortedAndFilteredReservations.length} réservation
-              {sortedAndFilteredReservations.length > 1 ? 's' : ''} affichée
-              {sortedAndFilteredReservations.length > 1 ? 's' : ''}.
-            </div>
-
-            {/* TABLE — scroll mobile */}
-            <table className="min-w-full bg-white text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Client</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Type</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Destination</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Date</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Statut</th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-gray-200">
-                {sortedAndFilteredReservations.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
-                      Aucune réservation trouvée.
-                    </td>
-                  </tr>
-                ) : (
-                  sortedAndFilteredReservations.map((res) => (
-                    <tr
-                      key={res.id}
-                      onClick={() => setSelectedReservation(res)}
-                      className="hover:bg-orange-50 cursor-pointer transition-colors"
-                    >
-                      <td className="px-4 py-4">
-                        <div className="font-medium text-gray-900">
-                          {res.contact.prenom} {res.contact.nom}
-                        </div>
-                        <div className="text-gray-500 text-xs">{res.contact.email}</div>
-                      </td>
-
-                      <td className="px-4 py-4 text-gray-800">{TRIP_TYPE_LABELS[res.tripType]}</td>
-
-                      <td className="px-4 py-4 text-gray-800">{res.flights[0]?.to || '—'}</td>
-
-                      <td className="px-4 py-4 text-gray-600">
-                        {res.createdAt?.toDate
-                          ? format(res.createdAt.toDate(), 'dd MMM yyyy', { locale: fr })
-                          : '—'}
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <span className={`px-2.5 py-1 inline-flex text-xs font-medium rounded-full ${STATUS_COLORS[res.status]}`}>
-                          {STATUS_LABELS[res.status]}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <div>
-        <TopDestinations reservations={reservations} />
-      </div>
-    </div>
-
-    {/* MODALE — parfaitement responsive */}
-    {selectedReservation && (
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-4 bg-black/40 backdrop-blur-sm"
-        onClick={() => setSelectedReservation(null)}
-      >
-        <div
-          className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-auto mt-10"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="p-5 sm:p-6">
-
-            {/* MODAL HEADER */}
-            <div className="flex justify-between items-start mb-5">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Détails de la réservation</h2>
-                <p className="text-gray-500 text-sm">ID : {selectedReservation.id}</p>
-              </div>
-
-              <button
-                onClick={() => setSelectedReservation(null)}
-                className="text-gray-400 hover:text-gray-700 rounded-full p-1.5 hover:bg-gray-100 transition"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-
-            {/* BADGES */}
-            <div className="mb-4 flex flex-wrap gap-2">
-              <ContactBadge type="email" value={selectedReservation.contact.email} link={`mailto:${selectedReservation.contact.email}`} />
-              {selectedReservation.contact.telephone && (
-                <ContactBadge type="phone" value={selectedReservation.contact.telephone} link={`tel:${selectedReservation.contact.telephone.replace(/\s+/g, '')}`} />
-              )}
-            </div>
-
-            {/* STATUS + ACTIONS */}
-            <div className="flex flex-col sm:flex-row sm:justify-between gap-4 items-start sm:items-center mb-6 p-4 bg-gray-50 rounded-xl">
-              <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${STATUS_COLORS[selectedReservation.status]}`}>
-                {STATUS_LABELS[selectedReservation.status]}
-              </span>
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => updateStatus(selectedReservation.id, 'confirmed')}
-                  disabled={selectedReservation.status !== 'pending'}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    selectedReservation.status !== 'pending'
-                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}
-                >
-                  <CheckCircleIcon className="h-4 w-4" />
-                  Confirmer
-                </button>
-
-                <button
-                  onClick={() => updateStatus(selectedReservation.id, 'rejected')}
-                  disabled={selectedReservation.status !== 'pending'}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
-                    selectedReservation.status !== 'pending'
-                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : 'bg-red-600 text-white hover:bg-red-700'
-                  }`}
-                >
-                  <XCircleIcon className="h-4 w-4" />
-                  Rejeter
-                </button>
-
-                <button
-                  onClick={() => softDeleteReservation(selectedReservation.id)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                  Corbeille
-                </button>
-              </div>
-            </div>
-
-            {/* INFOS CLIENT */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-xl">
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <UserIcon className="h-5 w-5" /> Informations client
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                <p><span className="font-medium">Nom :</span> {selectedReservation.contact.nom}</p>
-                <p><span className="font-medium">Prénom :</span> {selectedReservation.contact.prenom}</p>
-              </div>
-            </div>
-
-            {/* DÉTAILS VOYAGE */}
-            <div className="mb-6">
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <MapPinIcon className="h-5 w-5" /> Détails du voyage
-              </h3>
-
-              <p className="mb-3"><span className="font-medium">Type :</span> {TRIP_TYPE_LABELS[selectedReservation.tripType]}</p>
-
-              {/* MULTI VOL */}
-              {selectedReservation.tripType === 'multi' ? (
-                <div className="mb-3">
-                  <span className="font-medium">Classes :</span>
-                  <ul className="mt-1 space-y-1 text-sm">
-                    {selectedReservation.flights.map((flight, idx) => (
-                      <li key={idx}>
-                        • {flight.from} → {flight.to}:{' '}
-                        <span className="font-medium">{CABIN_LABELS[flight.cabinClass]}</span>
-                      </li>
-                    ))}
-                  </ul>
+            <>
+              {/* HEADER */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
+                    <DocumentTextIcon className="h-8 w-8 text-[#ff781d]" />
+                    Réservations
+                  </h1>
+                  <p className="text-gray-500 text-sm mt-1">Historique complet, jamais perdu.</p>
                 </div>
-              ) : (
-                <p className="mb-3">
-                  <span className="font-medium">Classe :</span>{' '}
-                  {CABIN_LABELS[selectedReservation.flights[0]?.cabinClass] || '—'}
-                </p>
-              )}
-
-              <p className="mb-4">
-                <span className="font-medium">Voyageurs :</span>
-                {selectedReservation.travelers.adultes > 0 && ` ${selectedReservation.travelers.adultes} adulte(s)`}
-                {selectedReservation.travelers.enfants > 0 && `, ${selectedReservation.travelers.enfants} enfant(s)`}
-                {selectedReservation.travelers.bebes > 0 && `, ${selectedReservation.travelers.bebes} bébé(s)`}
-              </p>
-
-              <div className="space-y-4">
-                {selectedReservation.flights.map((flight, idx) => (
-                  <div key={idx} className="p-4 border-l-4 border-[#ff781d] bg-white rounded-r-lg shadow-sm">
-                    <p><span className="font-medium">Départ :</span> {flight.from} ({flight.fromIata})</p>
-                    <p><span className="font-medium">Destination :</span> {flight.to} ({flight.toIata})</p>
-                    <p>
-                      <span className="font-medium">Départ le :</span>{' '}
-                      {flight.departureDate?.toDate
-                        ? format(flight.departureDate.toDate(), 'dd MMM yyyy', { locale: fr })
-                        : '—'}
-                    </p>
-
-                    {flight.returnDate && (
-                      <p>
-                        <span className="font-medium">Retour le :</span>{' '}
-                        {format(flight.returnDate.toDate(), 'dd MMM yyyy', { locale: fr })}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                <button
+                  onClick={() => exportToCSV([...sortedAndFilteredReservations])}
+                  className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-800 text-white rounded-xl text-sm font-medium hover:bg-gray-700 transition shadow-sm"
+                >
+                  <ArrowDownTrayIcon className="h-4 w-4" />
+                  Export CSV
+                </button>
               </div>
-            </div>
-
-            {/* ACTIONS */}
-            <ContactActions
-              email={selectedReservation.contact.email}
-              phone={selectedReservation.contact.telephone}
-            />
-          </div>
-        </div>
-      </div>
-    )}
-  </>
-)}
-
+              {/* STATS — mobile grid optimisée */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
+                <StatCard title="Total" value={stats.total} icon={DocumentTextIcon} color="bg-indigo-100 text-indigo-800" />
+                <StatCard title="Cette semaine" value={stats.thisWeek} icon={CalendarIcon} color="bg-purple-100 text-purple-800" />
+                <StatCard title="En attente" value={stats.pending} icon={ClockIcon} color="bg-yellow-100 text-yellow-800" />
+                <StatCard title="Confirmées" value={stats.confirmed} icon={CheckCircleIcon} color="bg-green-100 text-green-800" />
+                <StatCard title="Rejetées" value={stats.rejected} icon={XCircleIcon} color="bg-red-100 text-red-800" />
+              </div>
+              {/* FILTRES — Full responsive */}
+              <div className="grid grid-cols-1 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-200 mb-6">
+                <input
+                  type="text"
+                  placeholder="Rechercher (client, destination...)"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
+                  />
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'date' | 'status' | 'tripType' | 'destination' | 'client')}
+                    className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
+                  >
+                    <option value="date">Trier par date</option>
+                    <option value="status">Statut</option>
+                    <option value="tripType">Type de voyage</option>
+                    <option value="destination">Destination</option>
+                    <option value="client">Client</option>
+                  </select>
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                    className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#ff781d] outline-none"
+                  >
+                    <option value="desc">↓ Récent</option>
+                    <option value="asc">↑ Ancien</option>
+                  </select>
+                </div>
+              </div>
+              {/* CONTENT */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+                <div className="lg:col-span-3">
+                  {loadingReservations ? (
+                    <div className="bg-white rounded-2xl shadow border border-gray-200 p-12 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#ff781d] mx-auto"></div>
+                      <p className="mt-4 text-gray-600">Chargement...</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-2xl shadow border border-gray-200">
+                      <div className="px-4 py-3 text-sm text-gray-600 bg-gray-50 border-b border-gray-200">
+                        {sortedAndFilteredReservations.length} réservation
+                        {sortedAndFilteredReservations.length > 1 ? 's' : ''} affichée
+                        {sortedAndFilteredReservations.length > 1 ? 's' : ''}.
+                      </div>
+                      {/* TABLE — scroll mobile */}
+                      <table className="min-w-full bg-white text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Client</th>
+                            <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Type</th>
+                            <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Destination</th>
+                            <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Date</th>
+                            <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase">Statut</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {sortedAndFilteredReservations.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                                Aucune réservation trouvée.
+                              </td>
+                            </tr>
+                          ) : (
+                            sortedAndFilteredReservations.map((res) => (
+                              <tr
+                                key={res.id}
+                                onClick={() => setSelectedReservation(res)}
+                                className="hover:bg-orange-50 cursor-pointer transition-colors"
+                              >
+                                <td className="px-4 py-4">
+                                  <div className="font-medium text-gray-900">
+                                    {res.contact.prenom} {res.contact.nom}
+                                  </div>
+                                  <div className="text-gray-500 text-xs">{res.contact.email}</div>
+                                </td>
+                                <td className="px-4 py-4 text-gray-800">{TRIP_TYPE_LABELS[res.tripType]}</td>
+                                <td className="px-4 py-4 text-gray-800">{res.flights[0]?.to || '—'}</td>
+                                <td className="px-4 py-4 text-gray-600">
+                                  {res.createdAt?.toDate
+                                    ? format(res.createdAt.toDate(), 'dd MMM yyyy', { locale: fr })
+                                    : '—'}
+                                </td>
+                                <td className="px-4 py-4">
+                                  <span className={`px-2.5 py-1 inline-flex text-xs font-medium rounded-full ${STATUS_COLORS[res.status]}`}>
+                                    {STATUS_LABELS[res.status]}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <TopDestinations reservations={reservations} />
+                </div>
+              </div>
+              {/* MODALE — parfaitement responsive */}
+              {selectedReservation && (
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-4 bg-black/40 backdrop-blur-sm"
+                  onClick={() => setSelectedReservation(null)}
+                >
+                  <div
+                    className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-auto mt-10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="p-5 sm:p-6">
+                      {/* MODAL HEADER */}
+                      <div className="flex justify-between items-start mb-5">
+                        <div>
+                          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Détails de la réservation</h2>
+                          <p className="text-gray-500 text-sm">ID : {selectedReservation.id}</p>
+                        </div>
+                        <button
+                          onClick={() => setSelectedReservation(null)}
+                          className="text-gray-400 hover:text-gray-700 rounded-full p-1.5 hover:bg-gray-100 transition"
+                        >
+                          <XMarkIcon className="h-6 w-6" />
+                        </button>
+                      </div>
+                      {/* BADGES */}
+                      <div className="mb-4 flex flex-wrap gap-2">
+                        <ContactBadge type="email" value={selectedReservation.contact.email} link={`mailto:${selectedReservation.contact.email}`} />
+                        {selectedReservation.contact.telephone && (
+                          <ContactBadge type="phone" value={selectedReservation.contact.telephone} link={`tel:${selectedReservation.contact.telephone.replace(/\s+/g, '')}`} />
+                        )}
+                      </div>
+                      {/* STATUS + ACTIONS */}
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => updateStatus(selectedReservation.id, 'confirmed')}
+                          disabled={selectedReservation.status !== 'pending'}
+                          className={`flex items-center justify-center gap-1.5 h-10 min-w-[8.5rem] px-3 rounded-lg text-sm font-medium transition ${selectedReservation.status !== 'pending'
+                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              : 'bg-green-600 text-white hover:bg-green-700'
+                            }`}
+                        >
+                          <CheckCircleIcon className="h-4 w-4 flex-shrink-0 -my-px" />
+                          <span className="whitespace-nowrap">Confirmer</span>
+                        </button>
+                        <button
+                          onClick={() => updateStatus(selectedReservation.id, 'rejected')}
+                          disabled={selectedReservation.status !== 'pending'}
+                          className={`flex items-center justify-center gap-1.5 h-10 min-w-[8.5rem] px-3 rounded-lg text-sm font-medium transition ${selectedReservation.status !== 'pending'
+                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              : 'bg-red-600 text-white hover:bg-red-700'
+                            }`}
+                        >
+                          <XCircleIcon className="h-4 w-4 flex-shrink-0 -my-px" />
+                          <span className="whitespace-nowrap">Rejeter</span>
+                        </button>
+                        <button
+                          onClick={() => softDeleteReservation(selectedReservation.id)}
+                          className="flex items-center justify-center gap-1.5 h-10 min-w-[8.5rem] px-3 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                          <span className="whitespace-nowrap">Corbeille</span>
+                        </button>
+                      </div>
+                      {/* INFOS CLIENT */}
+                      <div className="mb-6 p-4 bg-gray-50 rounded-xl">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2">
+                          <UserIcon className="h-5 w-5" /> Informations client
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                          <p><span className="font-medium">Nom :</span> {selectedReservation.contact.nom}</p>
+                          <p><span className="font-medium">Prénom :</span> {selectedReservation.contact.prenom}</p>
+                        </div>
+                      </div>
+                      {/* DÉTAILS VOYAGE */}
+                      <div className="mb-6">
+                        <h3 className="font-semibold mb-3 flex items-center gap-2">
+                          <MapPinIcon className="h-5 w-5" /> Détails du voyage
+                        </h3>
+                        <p className="mb-3"><span className="font-medium">Type :</span> {TRIP_TYPE_LABELS[selectedReservation.tripType]}</p>
+                        {/* MULTI VOL */}
+                        {selectedReservation.tripType === 'multi' ? (
+                          <div className="mb-3">
+                            <span className="font-medium">Classes :</span>
+                            <ul className="mt-1 space-y-1 text-sm">
+                              {selectedReservation.flights.map((flight, idx) => (
+                                <li key={idx}>
+                                  • {flight.from} → {flight.to}:{' '}
+                                  <span className="font-medium">{CABIN_LABELS[flight.cabinClass]}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : (
+                          <p className="mb-3">
+                            <span className="font-medium">Classe :</span>{' '}
+                            {CABIN_LABELS[selectedReservation.flights[0]?.cabinClass] || '—'}
+                          </p>
+                        )}
+                        <p className="mb-4">
+                          <span className="font-medium">Voyageurs :</span>
+                          {selectedReservation.travelers.adultes > 0 && ` ${selectedReservation.travelers.adultes} adulte(s)`}
+                          {selectedReservation.travelers.enfants > 0 && `, ${selectedReservation.travelers.enfants} enfant(s)`}
+                          {selectedReservation.travelers.bebes > 0 && `, ${selectedReservation.travelers.bebes} bébé(s)`}
+                        </p>
+                        <div className="space-y-4">
+                          {selectedReservation.flights.map((flight, idx) => (
+                            <div key={idx} className="p-4 border-l-4 border-[#ff781d] bg-white rounded-r-lg shadow-sm">
+                              <p><span className="font-medium">Départ :</span> {flight.from} ({flight.fromIata})</p>
+                              <p><span className="font-medium">Destination :</span> {flight.to} ({flight.toIata})</p>
+                              <p>
+                                <span className="font-medium">Départ le :</span>{' '}
+                                {flight.departureDate?.toDate
+                                  ? format(flight.departureDate.toDate(), 'dd MMM yyyy', { locale: fr })
+                                  : '—'}
+                              </p>
+                              {flight.returnDate && (
+                                <p>
+                                  <span className="font-medium">Retour le :</span>{' '}
+                                  {format(flight.returnDate.toDate(), 'dd MMM yyyy', { locale: fr })}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {/* ACTIONS */}
+                      <ContactActions
+                        email={selectedReservation.contact.email}
+                        phone={selectedReservation.contact.telephone}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
 
           {/* MESSAGES */}
           {activeTab === 'messages' && (
@@ -1188,137 +1157,189 @@ export default function AdminDashboard() {
                   ) : null
                 }
                 actions={
-                  selectedMessage ? <ContactActions email={selectedMessage.email} phone={selectedMessage.telephone} /> : null
-                }
+  selectedMessage ? (
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Répondre / Appeler */}
+      <a
+        href={`mailto:${selectedMessage.email}`}
+        className="flex items-center justify-center gap-1.5 h-10 min-w-[8rem] px-3 rounded-lg bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 font-medium text-sm transition shadow-sm"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+        Répondre
+      </a>
+      {selectedMessage.telephone && (
+        <a
+          href={`tel:${selectedMessage.telephone.replace(/\s+/g, '')}`}
+          className="flex items-center justify-center gap-1.5 h-10 min-w-[8rem] px-3 rounded-lg bg-green-600 text-white font-medium text-sm hover:bg-green-700 transition shadow-sm"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+          </svg>
+          Appeler
+        </a>
+      )}
+      {/* Corbeille */}
+      <button
+        onClick={() => softDeleteMessage(selectedMessage.id)}
+        className="flex items-center justify-center gap-1.5 h-10 min-w-[8rem] px-3 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition"
+      >
+        <TrashIcon className="h-4 w-4 flex-shrink-0" />
+        Corbeille
+      </button>
+    </div>
+  ) : null
+}
               />
             </>
           )}
 
           {/* CORBEILLE */}
           {activeTab === 'trash' && (
-            <div className="space-y-8">
-              <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
-                  <ArchiveBoxIcon className="h-8 w-8 text-[#ff781d]" />
-                  Corbeille
-                </h1>
-                <p className="text-gray-600">
-                  {deletedReservations.length + deletedMessages.length} élément{deletedReservations.length + deletedMessages.length !== 1 ? 's' : ''} supprimé{deletedReservations.length + deletedMessages.length !== 1 ? 's' : ''}
-                </p>
+  <div className="space-y-8 animate-fade-in">
+    {/* Header */}
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-[#034784]/10 rounded-xl">
+          <ArchiveBoxIcon className="h-7 w-7 text-[#ff781d]" aria-hidden="true" />
+        </div>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
+          Corbeille
+        </h1>
+      </div>
+      <p className="text-gray-600 font-medium">
+        {deletedReservations.length + deletedMessages.length} élément{deletedReservations.length + deletedMessages.length !== 1 ? 's' : ''} supprimé{deletedReservations.length + deletedMessages.length !== 1 ? 's' : ''}
+      </p>
+    </div>
+
+    {/* Réservations supprimées */}
+    {deletedReservations.length > 0 && (
+      <section>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[#ff781d]"></span>
+          Réservations supprimées
+        </h2>
+        <div className="space-y-4">
+          {deletedReservations.map((res) => (
+            <div
+              key={res.id}
+              className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 ease-out"
+            >
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <p className="font-semibold text-gray-900">
+                    {res.contact.prenom} {res.contact.nom}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {res.createdAt?.toDate
+                      ? format(res.createdAt.toDate(), 'dd MMM yyyy', { locale: fr })
+                      : '—'}
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => updateDoc(doc(db, 'reservations', res.id), { isDeleted: false })}
+                    className="px-4 py-2 text-sm font-medium text-[#ff781d] hover:bg-[#ff781d]/10 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#ff781d]"
+                    aria-label={`Restaurer la réservation de ${res.contact.prenom} ${res.contact.nom}`}
+                  >
+                    Restaurer
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (window.confirm('⚠️ Supprimer définitivement ? Cette action est irréversible.')) {
+                        try {
+                          await deleteDoc(doc(db, 'reservations', res.id));
+                          setToast({ message: 'Supprimé définitivement.', type: 'success' });
+                        } catch (err) {
+                          setToast({ message: 'Erreur.', type: 'error' });
+                        }
+                      }
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                    aria-label={`Supprimer définitivement la réservation de ${res.contact.prenom} ${res.contact.nom}`}
+                  >
+                    Supprimer
+                  </button>
+                </div>
               </div>
-              {/* Réservations supprimées */}
-              {deletedReservations.length > 0 && (
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-800 mb-3">Réservations supprimées</h2>
-                  <div className="bg-white rounded-2xl shadow border border-gray-200 overflow-hidden">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left">Client</th>
-                          <th className="px-4 py-3 text-left">Date</th>
-                          <th className="px-4 py-3 text-left">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {deletedReservations.map((res) => (
-                          <tr key={res.id}>
-                            <td className="px-4 py-3">{res.contact.prenom} {res.contact.nom}</td>
-                            <td className="px-4 py-3">
-                              {res.createdAt?.toDate ? format(res.createdAt.toDate(), 'dd/MM/yyyy', { locale: fr }) : '—'}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => updateDoc(doc(db, 'reservations', res.id), { isDeleted: false })}
-                                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                                >
-                                  Restaurer
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (window.confirm('⚠️ Supprimer définitivement ? Cette action est irréversible.')) {
-                                      try {
-                                        await deleteDoc(doc(db, 'reservations', res.id));
-                                        setToast({ message: 'Supprimé définitivement.', type: 'success' });
-                                      } catch (err) {
-                                        setToast({ message: 'Erreur.', type: 'error' });
-                                      }
-                                    }
-                                  }}
-                                  className="text-sm text-red-600 hover:text-red-800 font-medium"
-                                >
-                                  Supprimer
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-              {/* Messages supprimés */}
-              {deletedMessages.length > 0 && (
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-800 mb-3">Messages supprimés</h2>
-                  <div className="bg-white rounded-2xl shadow border border-gray-200 overflow-hidden">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left">Expéditeur</th>
-                          <th className="px-4 py-3 text-left">Date</th>
-                          <th className="px-4 py-3 text-left">Aperçu</th>
-                          <th className="px-4 py-3 text-left">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {deletedMessages.map((msg) => (
-                          <tr key={msg.id}>
-                            <td className="px-4 py-3">{msg.prenom} {msg.nom}</td>
-                            <td className="px-4 py-3">
-                              {msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'dd/MM/yyyy', { locale: fr }) : '—'}
-                            </td>
-                            <td className="px-4 py-3 max-w-xs truncate">{msg.message.substring(0, 50)}...</td>
-                            <td className="px-4 py-3">
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => updateDoc(doc(db, 'messages', msg.id), { isDeleted: false })}
-                                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                                >
-                                  Restaurer
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (window.confirm('⚠️ Supprimer définitivement ?')) {
-                                      try {
-                                        await deleteDoc(doc(db, 'messages', msg.id));
-                                        setToast({ message: 'Supprimé définitivement.', type: 'success' });
-                                      } catch (err) {
-                                        setToast({ message: 'Erreur.', type: 'error' });
-                                      }
-                                    }
-                                  }}
-                                  className="text-sm text-red-600 hover:text-red-800 font-medium"
-                                >
-                                  Supprimer
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-              {deletedReservations.length === 0 && deletedMessages.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  La corbeille est vide.
-                </div>
-              )}
             </div>
-          )}
+          ))}
+        </div>
+      </section>
+    )}
+
+    {/* Messages supprimés */}
+    {deletedMessages.length > 0 && (
+      <section>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[#ff781d]"></span>
+          Messages supprimés
+        </h2>
+        <div className="space-y-4">
+          {deletedMessages.map((msg) => (
+            <div
+              key={msg.id}
+              className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 ease-out"
+            >
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900">
+                    {msg.prenom} {msg.nom}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {msg.createdAt?.toDate
+                      ? format(msg.createdAt.toDate(), 'dd MMM yyyy', { locale: fr })
+                      : '—'}
+                  </p>
+                  <p className="text-gray-700 mt-2 line-clamp-2">
+                    {msg.message}
+                  </p>
+                </div>
+                <div className="flex gap-3 mt-2 md:mt-0">
+                  <button
+                    onClick={() => updateDoc(doc(db, 'messages', msg.id), { isDeleted: false })}
+                    className="px-4 py-2 text-sm font-medium text-[#ff781d] hover:bg-[#ff781d]/10 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#ff781d]"
+                    aria-label={`Restaurer le message de ${msg.prenom} ${msg.nom}`}
+                  >
+                    Restaurer
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (window.confirm('⚠️ Supprimer définitivement ?')) {
+                        try {
+                          await deleteDoc(doc(db, 'messages', msg.id));
+                          setToast({ message: 'Supprimé définitivement.', type: 'success' });
+                        } catch (err) {
+                          setToast({ message: 'Erreur.', type: 'error' });
+                        }
+                      }
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                    aria-label={`Supprimer définitivement le message de ${msg.prenom} ${msg.nom}`}
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
+
+    {/* Empty state */}
+    {deletedReservations.length === 0 && deletedMessages.length === 0 && (
+      <div className="text-center py-16 bg-gray-50 rounded-2xl border border-gray-200">
+        <div className="inline-block p-3 bg-gray-100 rounded-full mb-4">
+          <ArchiveBoxIcon className="h-8 w-8 text-gray-400" aria-hidden="true" />
+        </div>
+        <h3 className="text-lg font-medium text-gray-700">La corbeille est vide</h3>
+        <p className="text-gray-500 mt-1">Les éléments supprimés apparaîtront ici.</p>
+      </div>
+    )}
+  </div>
+)}
 
           <footer className="mt-8 text-center text-gray-500 text-sm">
             ✈️ Exitravel — Tableau de bord professionnel. Historique jamais perdu.
