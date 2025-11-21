@@ -61,7 +61,6 @@ type Reservation = {
   createdAt: any;
   isDeleted?: boolean;
 };
-
 type Message = {
   id: string;
   nom: string;
@@ -82,19 +81,16 @@ const STATUS_LABELS: Record<string, string> = {
   confirmed: 'Confirmé',
   rejected: 'Rejeté',
 };
-
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
 };
-
 const TRIP_TYPE_LABELS: Record<string, string> = {
   round: 'Aller-retour',
   oneWay: 'Aller simple',
   multi: 'Multiville',
 };
-
 const CABIN_LABELS: Record<string, string> = {
   eco: 'Éco',
   ecoPremium: 'Éco Premium',
@@ -117,8 +113,8 @@ const ContactBadge = ({
   <a
     href={link}
     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition ${type === 'email'
-      ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-      : 'bg-green-50 text-green-700 hover:bg-green-100'
+        ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+        : 'bg-green-50 text-green-700 hover:bg-green-100'
       } border border-transparent hover:border-current`}
   >
     {type === 'email' ? (
@@ -133,7 +129,6 @@ const ContactBadge = ({
     {value}
   </a>
 );
-
 const ContactActions = ({ email, phone }: { email: string; phone?: string }) => (
   <div className="flex gap-2 pt-3">
     <a
@@ -158,7 +153,6 @@ const ContactActions = ({ email, phone }: { email: string; phone?: string }) => 
     )}
   </div>
 );
-
 const UnifiedModal = ({
   isOpen,
   onClose,
@@ -202,7 +196,6 @@ const UnifiedModal = ({
     </div>
   );
 };
-
 const StatCard = ({ title, value, icon: Icon, color = 'bg-blue-100 text-blue-800' }: any) => (
   <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
     <div className="flex items-center gap-3">
@@ -216,7 +209,6 @@ const StatCard = ({ title, value, icon: Icon, color = 'bg-blue-100 text-blue-800
     </div>
   </div>
 );
-
 const TopDestinations = ({ reservations }: { reservations: Reservation[] }) => {
   const destinations = useMemo(() => {
     const count: Record<string, number> = {};
@@ -230,9 +222,7 @@ const TopDestinations = ({ reservations }: { reservations: Reservation[] }) => {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
   }, [reservations]);
-
   if (destinations.length === 0) return null;
-
   return (
     <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
       <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -256,7 +246,6 @@ const TopDestinations = ({ reservations }: { reservations: Reservation[] }) => {
 // ========================
 const exportToCSV = (reservations: Reservation[]) => {
   if (reservations.length === 0) return;
-
   const headers = [
     'ID',
     'Date',
@@ -269,7 +258,6 @@ const exportToCSV = (reservations: Reservation[]) => {
     'Voyageurs (Adultes/Enfants/Bébés)',
     'Détail des vols (Départ → Destination | Classe | Date)',
   ];
-
   const rows = reservations.map((res) => {
     const createdAt = res.createdAt?.toDate?.();
     const date = createdAt ? format(createdAt, 'dd/MM/yyyy', { locale: fr }) : '';
@@ -282,7 +270,6 @@ const exportToCSV = (reservations: Reservation[]) => {
         return `${f.from} → ${f.to} | ${cls} | ${depDateStr}`;
       })
       .join(' ; ');
-
     return [
       res.id,
       date,
@@ -298,7 +285,6 @@ const exportToCSV = (reservations: Reservation[]) => {
       .map((field) => `"${String(field ?? '').replace(/"/g, '""')}"`)
       .join(';');
   });
-
   const csvContent = ['\uFEFF' + headers.join(';'), ...rows].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -324,7 +310,6 @@ export default function AdminDashboard() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-
   // Données
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [deletedReservations, setDeletedReservations] = useState<Reservation[]>([]);
@@ -332,11 +317,9 @@ export default function AdminDashboard() {
   const [deletedMessages, setDeletedMessages] = useState<Message[]>([]);
   const [loadingReservations, setLoadingReservations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(true);
-
   // Sélection
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-
   // UI
   const [activeTab, setActiveTab] = useState<'reservations' | 'messages' | 'trash'>('reservations');
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -347,7 +330,6 @@ export default function AdminDashboard() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
   // Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevReservationsLength = useRef(0);
@@ -386,7 +368,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!user) return;
-
     const reservationsUnsub = onSnapshot(
       query(collection(db, 'reservations'), orderBy('createdAt', 'desc')),
       (snapshot) => {
@@ -403,7 +384,6 @@ export default function AdminDashboard() {
         prevReservationsLength.current = allRes.filter(r => !r.isDeleted).length;
       }
     );
-
     const messagesUnsub = onSnapshot(
       query(collection(db, 'messages'), orderBy('createdAt', 'desc')),
       (snapshot) => {
@@ -420,7 +400,6 @@ export default function AdminDashboard() {
         prevMessagesLength.current = allMsg.filter(m => !m.isDeleted).length;
       }
     );
-
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('/firebase-messaging-sw.js').then(() => {
         const messaging = getMessaging();
@@ -437,7 +416,6 @@ export default function AdminDashboard() {
         });
       });
     }
-
     return () => {
       reservationsUnsub();
       messagesUnsub();
@@ -456,11 +434,9 @@ export default function AdminDashboard() {
       setLoginError('Email ou mot de passe incorrect.');
     }
   };
-
   const handleLogout = async () => {
     await signOut(auth);
   };
-
   const updateStatus = async (id: string, status: 'confirmed' | 'rejected') => {
     try {
       await updateDoc(doc(db, 'reservations', id), { status });
@@ -469,7 +445,6 @@ export default function AdminDashboard() {
       console.error(err);
     }
   };
-
   const softDeleteReservation = async (id: string) => {
     try {
       await updateDoc(doc(db, 'reservations', id), { isDeleted: true });
@@ -480,7 +455,6 @@ export default function AdminDashboard() {
       console.error(err);
     }
   };
-
   const softDeleteMessage = async (id: string) => {
     try {
       await updateDoc(doc(db, 'messages', id), { isDeleted: true });
@@ -491,7 +465,6 @@ export default function AdminDashboard() {
       console.error(err);
     }
   };
-
   const markAsRead = async (id: string) => {
     try {
       await updateDoc(doc(db, 'messages', id), { isRead: true });
@@ -581,7 +554,6 @@ export default function AdminDashboard() {
       </div>
     );
   }
-
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
@@ -645,7 +617,7 @@ export default function AdminDashboard() {
           {!isCollapsed && (
             <div>
               <h2 className="text-lg font-bold text-gray-900">Exitravel Pro</h2>
-              <p className="text-xs text-gray-500">Tableau de bord</p>
+              <p className="text-gray-500 text-xs">Tableau de bord</p>
             </div>
           )}
           <button
@@ -732,7 +704,7 @@ export default function AdminDashboard() {
       >
         <div className="p-5 border-b border-gray-200">
           <h2 className="text-lg font-bold text-gray-900">Exitravel Pro</h2>
-          <p className="text-xs text-gray-500">Tableau de bord</p>
+          <p className="text-gray-500 text-xs">Tableau de bord</p>
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           <button
@@ -800,7 +772,7 @@ export default function AdminDashboard() {
                     <DocumentTextIcon className="h-8 w-8 text-[#ff781d]" />
                     Réservations
                   </h1>
-                  <p className="text-gray-500 text-sm mt-1">Historique complet, jamais perdu.</p>
+                  <p className="text-gray-600 text-sm mt-1">Historique complet, jamais perdu.</p>
                 </div>
                 <button
                   onClick={() => exportToCSV([...sortedAndFilteredReservations])}
@@ -810,7 +782,7 @@ export default function AdminDashboard() {
                   Export CSV
                 </button>
               </div>
-              {/* STATS — mobile grid optimisée */}
+              {/* STATS */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
                 <StatCard title="Total" value={stats.total} icon={DocumentTextIcon} color="bg-indigo-100 text-indigo-800" />
                 <StatCard title="Cette semaine" value={stats.thisWeek} icon={CalendarIcon} color="bg-purple-100 text-purple-800" />
@@ -818,7 +790,7 @@ export default function AdminDashboard() {
                 <StatCard title="Confirmées" value={stats.confirmed} icon={CheckCircleIcon} color="bg-green-100 text-green-800" />
                 <StatCard title="Rejetées" value={stats.rejected} icon={XCircleIcon} color="bg-red-100 text-red-800" />
               </div>
-              {/* FILTRES — Full responsive */}
+              {/* FILTRES */}
               <div className="grid grid-cols-1 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-200 mb-6">
                 <input
                   type="text"
@@ -863,7 +835,7 @@ export default function AdminDashboard() {
                   </select>
                 </div>
               </div>
-              {/* CONTENT */}
+              {/* TABLE */}
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
                 <div className="lg:col-span-3">
                   {loadingReservations ? (
@@ -878,7 +850,6 @@ export default function AdminDashboard() {
                         {sortedAndFilteredReservations.length > 1 ? 's' : ''} affichée
                         {sortedAndFilteredReservations.length > 1 ? 's' : ''}.
                       </div>
-                      {/* TABLE — scroll mobile */}
                       <table className="min-w-full bg-white text-sm">
                         <thead className="bg-gray-50">
                           <tr>
@@ -907,7 +878,7 @@ export default function AdminDashboard() {
                                   <div className="font-medium text-gray-900">
                                     {res.contact.prenom} {res.contact.nom}
                                   </div>
-                                  <div className="text-gray-500 text-xs">{res.contact.email}</div>
+                                  <div className="text-gray-600 text-xs">{res.contact.email}</div>
                                 </td>
                                 <td className="px-4 py-4 text-gray-800">{TRIP_TYPE_LABELS[res.tripType]}</td>
                                 <td className="px-4 py-4 text-gray-800">{res.flights[0]?.to || '—'}</td>
@@ -933,7 +904,7 @@ export default function AdminDashboard() {
                   <TopDestinations reservations={reservations} />
                 </div>
               </div>
-              {/* MODALE — parfaitement responsive */}
+              {/* MODALE RÉSERVATION */}
               {selectedReservation && (
                 <div
                   role="dialog"
@@ -946,7 +917,6 @@ export default function AdminDashboard() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="p-5 sm:p-6">
-                      {/* MODAL HEADER */}
                       <div className="flex justify-between items-start mb-5">
                         <div>
                           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Détails de la réservation</h2>
@@ -959,14 +929,12 @@ export default function AdminDashboard() {
                           <XMarkIcon className="h-6 w-6" />
                         </button>
                       </div>
-                      {/* BADGES */}
                       <div className="mb-4 flex flex-wrap gap-2">
                         <ContactBadge type="email" value={selectedReservation.contact.email} link={`mailto:${selectedReservation.contact.email}`} />
                         {selectedReservation.contact.telephone && (
                           <ContactBadge type="phone" value={selectedReservation.contact.telephone} link={`tel:${selectedReservation.contact.telephone.replace(/\s+/g, '')}`} />
                         )}
                       </div>
-                      {/* STATUS + ACTIONS */}
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => updateStatus(selectedReservation.id, 'confirmed')}
@@ -998,7 +966,6 @@ export default function AdminDashboard() {
                           <span className="whitespace-nowrap">Corbeille</span>
                         </button>
                       </div>
-                      {/* INFOS CLIENT */}
                       <div className="mb-6 p-4 bg-gray-50 rounded-xl">
                         <h3 className="font-semibold mb-3 flex items-center gap-2">
                           <UserIcon className="h-5 w-5" /> Informations client
@@ -1008,13 +975,11 @@ export default function AdminDashboard() {
                           <p><span className="font-medium">Prénom :</span> {selectedReservation.contact.prenom}</p>
                         </div>
                       </div>
-                      {/* DÉTAILS VOYAGE */}
                       <div className="mb-6">
                         <h3 className="font-semibold mb-3 flex items-center gap-2">
                           <MapPinIcon className="h-5 w-5" /> Détails du voyage
                         </h3>
                         <p className="mb-3"><span className="font-medium">Type :</span> {TRIP_TYPE_LABELS[selectedReservation.tripType]}</p>
-                        {/* MULTI VOL */}
                         {selectedReservation.tripType === 'multi' ? (
                           <div className="mb-3">
                             <span className="font-medium">Classes :</span>
@@ -1060,7 +1025,6 @@ export default function AdminDashboard() {
                           ))}
                         </div>
                       </div>
-                      {/* ACTIONS */}
                       <ContactActions
                         email={selectedReservation.contact.email}
                         phone={selectedReservation.contact.telephone}
@@ -1081,7 +1045,7 @@ export default function AdminDashboard() {
                     <ChatBubbleLeftRightIcon className="h-8 w-8 text-[#ff781d]" />
                     Messages de contact
                   </h1>
-                  <p className="text-gray-500 text-sm mt-1">Reçus depuis le site exitravel.net</p>
+                  <p className="text-gray-600 text-sm mt-1">Reçus depuis le site exitravel.net</p>
                 </div>
               </div>
               {loadingMessages ? (
@@ -1114,7 +1078,7 @@ export default function AdminDashboard() {
                               )}
                               <h3 className="font-semibold text-gray-900">{msg.prenom} {msg.nom}</h3>
                             </div>
-                            <span className="text-xs text-gray-500 whitespace-nowrap">
+                            <span className="text-xs text-gray-600 whitespace-nowrap">
                               {msg.createdAt?.toDate
                                 ? format(msg.createdAt.toDate(), 'dd MMM yyyy HH:mm', { locale: fr })
                                 : '—'}
@@ -1133,7 +1097,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               )}
-              {/* MODAL UNIFIÉ POUR MESSAGE */}
+              {/* MODAL MESSAGE */}
               <UnifiedModal
                 isOpen={!!selectedMessage}
                 onClose={() => setSelectedMessage(null)}
@@ -1143,10 +1107,10 @@ export default function AdminDashboard() {
                     <>
                       <div className="space-y-4">
                         <div>
-                          <p className="text-sm text-gray-500">Message</p>
+                          <p className="text-sm text-gray-600">Message</p>
                           <p className="text-gray-900 whitespace-pre-line">{selectedMessage.message}</p>
                         </div>
-                        <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+                        <div className="text-xs text-gray-600 pt-2 border-t border-gray-100">
                           Reçu le :{' '}
                           {selectedMessage.createdAt?.toDate
                             ? format(selectedMessage.createdAt.toDate(), 'dd MMM yyyy à HH:mm', { locale: fr })
@@ -1157,191 +1121,217 @@ export default function AdminDashboard() {
                   ) : null
                 }
                 actions={
-  selectedMessage ? (
-    <div className="flex flex-wrap items-center gap-2">
-      {/* Répondre / Appeler */}
-      <a
-        href={`mailto:${selectedMessage.email}`}
-        className="flex items-center justify-center gap-1.5 h-10 min-w-[8rem] px-3 rounded-lg bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 font-medium text-sm transition shadow-sm"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-        Répondre
-      </a>
-      {selectedMessage.telephone && (
-        <a
-          href={`tel:${selectedMessage.telephone.replace(/\s+/g, '')}`}
-          className="flex items-center justify-center gap-1.5 h-10 min-w-[8rem] px-3 rounded-lg bg-green-600 text-white font-medium text-sm hover:bg-green-700 transition shadow-sm"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-          </svg>
-          Appeler
-        </a>
-      )}
-      {/* Corbeille */}
-      <button
-        onClick={() => softDeleteMessage(selectedMessage.id)}
-        className="flex items-center justify-center gap-1.5 h-10 min-w-[8rem] px-3 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition"
-      >
-        <TrashIcon className="h-4 w-4 flex-shrink-0" />
-        Corbeille
-      </button>
-    </div>
-  ) : null
-}
+                  selectedMessage ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <a
+                        href={`mailto:${selectedMessage.email}`}
+                        className="flex items-center justify-center gap-1.5 h-10 min-w-[8rem] px-3 rounded-lg bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 font-medium text-sm transition shadow-sm"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        Répondre
+                      </a>
+                      {selectedMessage.telephone && (
+                        <a
+                          href={`tel:${selectedMessage.telephone.replace(/\s+/g, '')}`}
+                          className="flex items-center justify-center gap-1.5 h-10 min-w-[8rem] px-3 rounded-lg bg-green-600 text-white font-medium text-sm hover:bg-green-700 transition shadow-sm"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                          Appeler
+                        </a>
+                      )}
+                      <button
+                        onClick={() => softDeleteMessage(selectedMessage.id)}
+                        className="flex items-center justify-center gap-1.5 h-10 min-w-[8rem] px-3 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition"
+                      >
+                        <TrashIcon className="h-4 w-4 flex-shrink-0" />
+                        Corbeille
+                      </button>
+                    </div>
+                  ) : null
+                }
               />
             </>
           )}
 
-          {/* CORBEILLE */}
+          {/* CORBEILLE — ✅ FONCTIONNALITÉ AJOUTÉE */}
           {activeTab === 'trash' && (
-  <div className="space-y-8 animate-fade-in">
-    {/* Header */}
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-[#034784]/10 rounded-xl">
-          <ArchiveBoxIcon className="h-7 w-7 text-[#ff781d]" aria-hidden="true" />
-        </div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
-          Corbeille
-        </h1>
-      </div>
-      <p className="text-gray-600 font-medium">
-        {deletedReservations.length + deletedMessages.length} élément{deletedReservations.length + deletedMessages.length !== 1 ? 's' : ''} supprimé{deletedReservations.length + deletedMessages.length !== 1 ? 's' : ''}
-      </p>
-    </div>
-
-    {/* Réservations supprimées */}
-    {deletedReservations.length > 0 && (
-      <section>
-        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#ff781d]"></span>
-          Réservations supprimées
-        </h2>
-        <div className="space-y-4">
-          {deletedReservations.map((res) => (
-            <div
-              key={res.id}
-              className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 ease-out"
-            >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <p className="font-semibold text-gray-900">
-                    {res.contact.prenom} {res.contact.nom}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {res.createdAt?.toDate
-                      ? format(res.createdAt.toDate(), 'dd MMM yyyy', { locale: fr })
-                      : '—'}
-                  </p>
+            <div className="space-y-8 animate-fade-in">
+              {/* Header */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-[#034784]/10 rounded-xl">
+                    <ArchiveBoxIcon className="h-7 w-7 text-[#ff781d]" aria-hidden="true" />
+                  </div>
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
+                    Corbeille
+                  </h1>
                 </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => updateDoc(doc(db, 'reservations', res.id), { isDeleted: false })}
-                    className="px-4 py-2 text-sm font-medium text-[#ff781d] hover:bg-[#ff781d]/10 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#ff781d]"
-                    aria-label={`Restaurer la réservation de ${res.contact.prenom} ${res.contact.nom}`}
-                  >
-                    Restaurer
-                  </button>
+                <p className="text-gray-600 font-medium">
+                  {deletedReservations.length + deletedMessages.length} élément{deletedReservations.length + deletedMessages.length !== 1 ? 's' : ''} supprimé{deletedReservations.length + deletedMessages.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+
+              {/* ✅ BOUTON "VIDER TOUTE LA CORBEILLE" */}
+              {(deletedReservations.length > 0 || deletedMessages.length > 0) && (
+                <div className="flex justify-end mb-6">
                   <button
                     onClick={async () => {
-                      if (window.confirm('⚠️ Supprimer définitivement ? Cette action est irréversible.')) {
-                        try {
-                          await deleteDoc(doc(db, 'reservations', res.id));
-                          setToast({ message: 'Supprimé définitivement.', type: 'success' });
-                        } catch (err) {
-                          setToast({ message: 'Erreur.', type: 'error' });
-                        }
+                      if (!window.confirm('⚠️ Êtes-vous sûr·e de vouloir vider TOUTE la corbeille ? Cette action est irréversible.')) return;
+                      try {
+                        await Promise.all(
+                          deletedReservations.map((res) => deleteDoc(doc(db, 'reservations', res.id)))
+                        );
+                        await Promise.all(
+                          deletedMessages.map((msg) => deleteDoc(doc(db, 'messages', msg.id)))
+                        );
+                        setToast({ message: 'Corbeille vidée avec succès.', type: 'success' });
+                      } catch (err) {
+                        console.error('Erreur vidage corbeille:', err);
+                        setToast({ message: 'Erreur lors du vidage.', type: 'error' });
                       }
                     }}
-                    className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                    aria-label={`Supprimer définitivement la réservation de ${res.contact.prenom} ${res.contact.nom}`}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium text-sm hover:bg-red-700 transition shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                    aria-label="Vider la corbeille"
                   >
-                    Supprimer
+                    <TrashIcon className="h-4 w-4" />
+                    Vider la corbeille
                   </button>
                 </div>
-              </div>
+              )}
+
+              {/* Réservations supprimées */}
+              {deletedReservations.length > 0 && (
+                <section>
+                  <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#ff781d]"></span>
+                    Réservations supprimées
+                  </h2>
+                  <div className="space-y-4">
+                    {deletedReservations.map((res) => (
+                      <div
+                        key={res.id}
+                        className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 ease-out"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {res.contact.prenom} {res.contact.nom}
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {res.createdAt?.toDate
+                                ? format(res.createdAt.toDate(), 'dd MMM yyyy', { locale: fr })
+                                : '—'}
+                            </p>
+                          </div>
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => updateDoc(doc(db, 'reservations', res.id), { isDeleted: false })}
+                              className="px-4 py-2 text-sm font-medium text-[#ff781d] hover:bg-[#ff781d]/10 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#ff781d]"
+                              aria-label={`Restaurer la réservation de ${res.contact.prenom} ${res.contact.nom}`}
+                            >
+                              Restaurer
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (window.confirm('⚠️ Supprimer définitivement ? Cette action est irréversible.')) {
+                                  try {
+                                    await deleteDoc(doc(db, 'reservations', res.id));
+                                    setToast({ message: 'Supprimé définitivement.', type: 'success' });
+                                  } catch (err) {
+                                    setToast({ message: 'Erreur.', type: 'error' });
+                                  }
+                                }
+                              }}
+                              className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                              aria-label={`Supprimer définitivement la réservation de ${res.contact.prenom} ${res.contact.nom}`}
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Messages supprimés */}
+              {deletedMessages.length > 0 && (
+                <section>
+                  <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#ff781d]"></span>
+                    Messages supprimés
+                  </h2>
+                  <div className="space-y-4">
+                    {deletedMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 ease-out"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900">
+                              {msg.prenom} {msg.nom}
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {msg.createdAt?.toDate
+                                ? format(msg.createdAt.toDate(), 'dd MMM yyyy', { locale: fr })
+                                : '—'}
+                            </p>
+                            <p className="text-gray-800 mt-2 line-clamp-2">
+                              {msg.message}
+                            </p>
+                          </div>
+                          <div className="flex gap-3 mt-2 md:mt-0">
+                            <button
+                              onClick={() => updateDoc(doc(db, 'messages', msg.id), { isDeleted: false })}
+                              className="px-4 py-2 text-sm font-medium text-[#ff781d] hover:bg-[#ff781d]/10 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#ff781d]"
+                              aria-label={`Restaurer le message de ${msg.prenom} ${msg.nom}`}
+                            >
+                              Restaurer
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (window.confirm('⚠️ Supprimer définitivement ?')) {
+                                  try {
+                                    await deleteDoc(doc(db, 'messages', msg.id));
+                                    setToast({ message: 'Supprimé définitivement.', type: 'success' });
+                                  } catch (err) {
+                                    setToast({ message: 'Erreur.', type: 'error' });
+                                  }
+                                }
+                              }}
+                              className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                              aria-label={`Supprimer définitivement le message de ${msg.prenom} ${msg.nom}`}
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Empty state */}
+              {deletedReservations.length === 0 && deletedMessages.length === 0 && (
+                <div className="text-center py-16 bg-gray-50 rounded-2xl border border-gray-200">
+                  <div className="inline-block p-3 bg-gray-100 rounded-full mb-4">
+                    <ArchiveBoxIcon className="h-8 w-8 text-gray-400" aria-hidden="true" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-700">La corbeille est vide</h3>
+                  <p className="text-gray-600 mt-1">Les éléments supprimés apparaîtront ici.</p>
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      </section>
-    )}
+          )}
 
-    {/* Messages supprimés */}
-    {deletedMessages.length > 0 && (
-      <section>
-        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#ff781d]"></span>
-          Messages supprimés
-        </h2>
-        <div className="space-y-4">
-          {deletedMessages.map((msg) => (
-            <div
-              key={msg.id}
-              className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 ease-out"
-            >
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900">
-                    {msg.prenom} {msg.nom}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {msg.createdAt?.toDate
-                      ? format(msg.createdAt.toDate(), 'dd MMM yyyy', { locale: fr })
-                      : '—'}
-                  </p>
-                  <p className="text-gray-700 mt-2 line-clamp-2">
-                    {msg.message}
-                  </p>
-                </div>
-                <div className="flex gap-3 mt-2 md:mt-0">
-                  <button
-                    onClick={() => updateDoc(doc(db, 'messages', msg.id), { isDeleted: false })}
-                    className="px-4 py-2 text-sm font-medium text-[#ff781d] hover:bg-[#ff781d]/10 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#ff781d]"
-                    aria-label={`Restaurer le message de ${msg.prenom} ${msg.nom}`}
-                  >
-                    Restaurer
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (window.confirm('⚠️ Supprimer définitivement ?')) {
-                        try {
-                          await deleteDoc(doc(db, 'messages', msg.id));
-                          setToast({ message: 'Supprimé définitivement.', type: 'success' });
-                        } catch (err) {
-                          setToast({ message: 'Erreur.', type: 'error' });
-                        }
-                      }
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                    aria-label={`Supprimer définitivement le message de ${msg.prenom} ${msg.nom}`}
-                  >
-                    Supprimer
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    )}
-
-    {/* Empty state */}
-    {deletedReservations.length === 0 && deletedMessages.length === 0 && (
-      <div className="text-center py-16 bg-gray-50 rounded-2xl border border-gray-200">
-        <div className="inline-block p-3 bg-gray-100 rounded-full mb-4">
-          <ArchiveBoxIcon className="h-8 w-8 text-gray-400" aria-hidden="true" />
-        </div>
-        <h3 className="text-lg font-medium text-gray-700">La corbeille est vide</h3>
-        <p className="text-gray-500 mt-1">Les éléments supprimés apparaîtront ici.</p>
-      </div>
-    )}
-  </div>
-)}
-
-          <footer className="mt-8 text-center text-gray-500 text-sm">
+          <footer className="mt-8 text-center text-gray-600 text-sm">
             ✈️ Exitravel — Tableau de bord professionnel. Historique jamais perdu.
           </footer>
         </div>
